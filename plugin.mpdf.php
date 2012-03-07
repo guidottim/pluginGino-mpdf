@@ -2,7 +2,7 @@
 /**
  * Plugin per la creazione di file PDF con la libreria mPDF (http://www.mpdf1.com/mpdf/).
  * mPDF è una classe PHP che genera file PDF da codice HTML con Unicode/UTF-8 e supporto CJK.
- * In gino è testato con la versione 5.4.
+ * gino è stato testato con la versione 5.4.
  * 
  * ========================
  * INSTALLAZIONE
@@ -14,6 +14,12 @@
  * 4. copiare il file func.mpdf.php nella directory lib.
  * 
  * ========================
+ * Utilizzo
+ * ========================
+ * Per attivare la classe occorre includerla all'inizio del file che genera il PDF:
+ * require_once(PLUGIN_DIR.OS.'plugin.mpdf.php');
+ *
+ * ========================
  * Note
  * ========================
  * La libreria mPDF può richiedere una quantità di memoria maggiore del previsto.
@@ -21,49 +27,7 @@
  * php_admin_value memory_limit "32M"
  * 
  * ========================
- * Parametri di personalizzazione della classe mPDF
- * ========================
- * 
-class mPDF (
-[ string $mode
-[, mixed $format
-[, float $default_font_size
-[, string $default_font
-[, float $margin_left ,
-float $margin_right ,
-float $margin_top ,
-float $margin_bottom ,
-float $margin_header ,
-float $margin_footer
-[, string $orientation ]]]]]]
-)
- * 
- * ========================
- * Esempio di utilizzo
- * ========================
- * 
-$pdf = new pdf(array('output'=>$output, 'debug'=>$this->_debug_doc));
-
-// HTML
-$header = $this->headerPDF($header_pdf, $pdf->el($p_number), $p_revision);
-$footer = $this->footerPDF($footer_pdf);
-$html1 .= $pdf->htmlStart(array('header'=>$header, 'footer'=>$footer));
-...
-$html1 .= $obj->breakPage();
-...
-// END (conviene creare un metodo ad hoc, tipo: $html1 = $this->htmlDoc($pdf, ...);)
-
-$html1 = $pdf->htmlCreate($html1);
-
-$html2 = $this->htmlDoc2($pdf, ...);
-$html2 = $pdf->htmlCreate($html2);
-
-$sequence = array($html1, array('orientation'=>'L', 'html'=>$html2));
-
-$pdf->createPDF($sequence, $filename, array('title'=>_("Progetto"), 'author'=>_("Otto Srl"), 'creator'=>_("Marco Guidotti"), 'watermark'=>$this->_watermark));
-
- * ========================
- * Tabella per personalizzare lo stile di tabella (DA RIVEDERE)
+ * [SVILUPPI] Tabella per personalizzare lo stile di tabella
  * ========================
  * 
 CREATE TABLE IF NOT EXISTS `style_print` (
@@ -74,19 +38,20 @@ CREATE TABLE IF NOT EXISTS `style_print` (
   `onetable` enum('no','yes') CHARACTER SET utf8 NOT NULL DEFAULT 'no',
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+ * 
  */
 class plugin_mpdf {
 	
 	private $_output, $_debug, $_tbl_style;
 	
-	/*
-	@param options
-		output [string]
-			send: invia il file inline al browser
-			file: salva localmente il file (indicare il percorso assoluto)
-			email: crea un file PDF e lo invia come allegato
-		debug [boolean]: stampa a video il buffer
-		table [string]: stile della tabella [IN SVILUPPO]
+	/**
+	* @param array	options
+		output	string		(send|file!email)
+					send: invia il file inline al browser
+					file: salva localmente il file (indicare il percorso assoluto)
+					email: crea un file PDF e lo invia come allegato
+		debug	boolean		stampa a video il buffer
+		table	string		stile della tabella [IN SVILUPPO]
 	*/
 	function __construct($options=array()){
 		
@@ -107,19 +72,19 @@ class plugin_mpdf {
 		$this->_tbl_style = 'style_print';
 	}
 	
-	/*
-	* Opzioni
-	* --------------------------------
-	* css			string		stili css personalizzati (diversi da css/mpdf.css, comunque inclusi di default)
-	* header		string		header personalizzato
-	* footer		string		footer personalizzato, stringhe sostitutive:
+	/**
+	* 
+	* @param array	options
+	* 	css			string		stili css personalizzati (diversi da css/mpdf.css, comunque inclusi di default)
+	* 	header		string		header personalizzato
+	* 	footer		string		footer personalizzato, stringhe sostitutive:
 	*							_NUMPAGE_	->	numero di pagina
 	*							_TOTPAGE_	->	numero totale di pagine
-	* number_page	boolean		stampa il numero di pagina (viene attivato se non è impostato 'footer')
+	* 	number_page	boolean		stampa il numero di pagina (viene attivato se non è impostato 'footer')
 	*
 	*
-	* Esempi
-	* --------------------------------
+	* @example
+	* 
 FILE CSS
 body {font-family: sans-serif; font-size: 10pt;}
 p {margin: 0pt;}
@@ -217,39 +182,19 @@ mpdf-->";
 			return $html;
 	}
 	
-	/*
-	 * class mPDF (
-	 * [ string $mode 
-	 * [, mixed $format 
-	 * [, float $default_font_size 
-	 * [, string $default_font 
-	 * [, float $margin_left , 
-	 * float $margin_right , 
-	 * float $margin_top , 
-	 * float $margin_bottom , 
-	 * float $margin_header , 
-	 * float $margin_footer 
-	 * [, string $orientation ]]]]]]
-	 * )
-	 */
-	
 	/**
 	 * 
 	 * @param string|array	$html		string	-> documento con pagine aventi la stessa struttura
 	 * 									array	-> documento con pagine che possono cambiare struttura (ad es. orientamento)
-	 * 									
 	 * 									struttura array: array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
 	 * @param string		$filename
 	 * @param array			$options
-	 * 
-	 * Opzioni
-	 * -----------------------------
-	 * landscape		boolean		imposta l'orientamento di default (false: portrait)
-	 * title			string		titolo del PDF
-	 * author			string		autore del PDF
-	 * creator			string		chi ha generato il PDF
-	 * watermark		boolean		scritta in sovraimpressione
-	 * watermark_text	string		testo della scritta in sovraimpressione
+	 * 			landscape		boolean		imposta l'orientamento di default (false: portrait)
+	 * 			title			string		titolo del PDF
+	 * 			author			string		autore del PDF
+	 * 			creator			string		chi ha generato il PDF
+	 * 			watermark		boolean		scritta in sovraimpressione
+	 * 			watermark_text	string		testo della scritta in sovraimpressione
 	 */
 	public function createPDF($html, $filename, $options=array()){
 		
@@ -384,11 +329,13 @@ mpdf-->";
 		return $text;
 	}
 	
-	/*
-	 * class		es. 'label'
-	 * style		es. 'color:#000000; font-size:10px';
-	 * other
-	 * type			text|textarea|editor
+	/**
+	 * @param string	$text
+	 * @param array		$options
+	 * 		class	string		es. 'label'
+	 * 		style	string		es. 'color:#000000; font-size:10px';
+	 * 		other	string
+	 * 		type	string		(text|textarea|editor)
 	 */
 	public function el($text, $options=array()){
 		
@@ -426,10 +373,11 @@ mpdf-->";
 		$ex2 = "<td width=\"50%\" valign=\"top\" rowspan=\"2\">$label1:<br />$value1</td>";
 	}
 	
-	/*
+	/**
 	 * Ogni elemento è una tabella
 	 * 
-	 * $data	array("<td width=\"10%\">"._("ID").": $countid</td>", "<td width=\"15%\">"._("Quantità").": $quantity</td>")
+	 * @param array		$data		sequenza di tag TD, ad esempio: array("<td width=\"10%\">"._("ID").": $countid</td>", "<td width=\"15%\">"._("Quantità").": $quantity</td>")
+	 * @param array		$options
 	 */
 	public function multiTable($data=array(), $options=array()){
 		
@@ -461,9 +409,11 @@ mpdf-->";
 		return $GINO;
 	}
 	
-	/*
-	 * $header	array("<td width=\"5%\">"._("ID")."</td>", "<td width=\"10%\">"._("Quantità")."</td>")
-	 * $data	array(array($record1_field1, $record1_field2), array($record2_field1, $record2_field2))
+	/**
+	 * 
+	 * @param array		$data		elementi della tabella, ad esempio: array(array($record1_field1, $record1_field2), array($record2_field1, $record2_field2))
+	 * @param array		$header		intestazioni della tabella, ad esempio: array("<td width=\"5%\">"._("ID")."</td>", "<td width=\"10%\">"._("Quantità")."</td>")
+	 * @param array		$options
 	 */
 	public function singleTable($data=array(), $header=array(), $options=array()){
 		
