@@ -1,9 +1,8 @@
 pluginGino-mpdf
 ================
 
-Plugin per [gino CMS](https://github.com/otto-torino/gino) per la creazione di file PDF con la libreria mPDF (http://www.mpdf1.com/mpdf/).
-mPDF è una classe PHP che genera file PDF da codice HTML con Unicode/UTF-8 e supporto CJK.
-gino è stato testato con la versione 5.4 della libreria.
+Plugin per [gino CMS](https://github.com/otto-torino/gino) per la creazione di file PDF con la libreria mPDF (http://www.mpdf1.com/mpdf/).   
+mPDF è una classe PHP che genera file PDF da codice HTML con Unicode/UTF-8 e supporto CJK. gino è stato testato con la versione 5.4 della libreria.
 
 Installazione
 -------------
@@ -32,26 +31,25 @@ Per ovviare all'inconveniente occorre inserire la direttiva **memory_limit** nel
 Parametri di personalizzazione della classe mPDF
 ------------------------------------------------
 
-class mPDF (
-[ string $mode
-[, mixed $format
-[, float $default_font_size
-[, string $default_font
-[, float $margin_left ,
-float $margin_right ,
-float $margin_top ,
-float $margin_bottom ,
-float $margin_header ,
-float $margin_footer
-[, string $orientation ]]]]]]
+class mPDF (   
+[ string $mode   
+[, mixed $format   
+[, float $default_font_size   
+[, string $default_font   
+[, float $margin_left ,   
+float $margin_right ,   
+float $margin_top ,   
+float $margin_bottom ,   
+float $margin_header ,   
+float $margin_footer   
+[, string $orientation ]]]]]]   
 )
 
 plugin.mpdf.php
 ---------------
 
-La classe plugin_mpdf contiene i metodi che permettono di interfacciarsi con la libreria mPDF e che gestiscono la generazione dei file PDF.
-
-La classe plugin_mpdf include i file della libreria mPDF (lib/MPDF/mpdf.php) e il file che contiene le funzioni per gestire la conversione corretta dei dati dal database al file PDF (func.mpdf.php). Inoltre il file PDF può essere personalizzato utilizzando i CSS (css/mpdf.css).
+La **classe plugin_mpdf** contiene i metodi che permettono di interfacciarsi con la libreria mPDF e che gestiscono la generazione dei file PDF.   
+La classe include i file della libreria mPDF (lib/MPDF/mpdf.php) e il file che contiene le funzioni per gestire la conversione corretta dei dati dal database al file PDF (func.mpdf.php). Inoltre il file PDF può essere personalizzato utilizzando i CSS (css/mpdf.css).
 
 **ATTENZIONE**: la classe è in fase di sviluppo. per cui alcune funzionalità sono ancora da perfezionare.
 
@@ -60,6 +58,7 @@ La classe plugin_mpdf include i file della libreria mPDF (lib/MPDF/mpdf.php) e i
 void **__construct**(array $**options**=array())
 
 @param options
+
 * output [string]
    * send: invia il file inline al browser
    * file: salva localmente il file (indicare il percorso assoluto)
@@ -69,12 +68,14 @@ void **__construct**(array $**options**=array())
 string **htmlStart**(array $**options**=array())
 
 @param options
+
 * css [string]: stili css personalizzati (diversi da quelli del file css/pdf.css, incluso di default)
 * header [string]: header personalizzato
 * footer [string]: footer personalizzato, stringhe sostitutive:
    * _NUMPAGE_: numero di pagina
    * _TOTPAGE_: numero totale di pagine
 * number_page [boolean]: stampa il numero di pagina (viene attivato se non è impostato 'footer')
+
 @description: imposta l'header e il footer del codice html
 @example
 
@@ -110,32 +111,39 @@ string **htmlEnd**()
 
 string **htmlCreate**(string $**html**)
 
-@param html: codice html
+@param html: codice html   
 @description: adatta il codice html alle corrette specifiche per la generazione del PDF
 
 file **createPDF**(string|array $**html**, string $**filename**, array $**options**=array())
 
 @param html
+
 * string -> documento con pagine aventi la stessa struttura
 * array -> documento con pagine che possono cambiare struttura (ad es. orientamento).   
 struttura array: array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
+
 @param filename: nome del file PDF
 @param options
+
 * landscape [boolean]: imposta l'orientamento di default (false: portrait)
 * title [string]: titolo del PDF
 * author [string]: autore del PDF
 * creator [string]: chi ha generato il PDF
 * watermark [boolean]: scritta in sovraimpressione
 * watermark_text [string]: testo della scritta in sovraimpressione
+
 @description: genera il file PDF. Per integrare altre opzioni fare riferimento alle opzioni previste nella class mPDF.
 
 email **emailPDF**(string|array $**html**, string $**filename**, array $**options**=array())
 
 @param html
+
 * string -> documento con pagine aventi la stessa struttura
 * array -> documento con pagine che possono cambiare struttura (ad es. orientamento). Struttura array: array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
-@param filename: nome del file PDF
+
+@param filename: nome del file PDF   
 @param options
+
 * send [boolean]: se vero invia il file anche al browser
 * mailto [string]: indirizzo al quale inviare l'email   
 * from_name [string]: nome di chi invia l'email
@@ -143,6 +151,7 @@ email **emailPDF**(string|array $**html**, string $**filename**, array $**option
 * replyto [string]:  indirizzo ri reply   
 * subject [string]: oggetto dell'email
 * message [string]: messaggio dell'email
+
 @description: genera il file PDF e lo invia come allegato email
 
 string **breakPage**()
@@ -151,17 +160,19 @@ string **breakPage**()
 
 string **longText**(string $**text**)
 
-@param text
+@param text   
 @description: racchiude il testo in un DIV
 
 string **el**(string $**text**, array $**options**=array())
 
-@param text
+@param text   
 @param options
+
 * class [string]: classe del tag SPAN (es. 'label')
 * style [string]: stile del tag SPAN (es. 'color:#000000; font-size:10px')
 * other [string]: altro nel tag SPAN
 * type [string]: text|textarea|editor
+
 @description: a seconda del valore di type, passa il testo a una funzione del file [[func.pdf.php]] ed eventualmente lo racchiude in un tag SPAN.
 
 Esempio
