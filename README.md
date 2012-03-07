@@ -72,8 +72,8 @@ string **htmlStart**(array $**options**=array())
 * css [string]: stili css personalizzati (diversi da quelli del file css/pdf.css, incluso di default)
 * header [string]: header personalizzato
 * footer [string]: footer personalizzato, stringhe sostitutive:
-   * _NUMPAGE_: numero di pagina
-   * _TOTPAGE_: numero totale di pagine
+   * \_NUMPAGE\_: numero di pagina
+   * \_TOTPAGE\_: numero totale di pagine
 * number_page [boolean]: stampa il numero di pagina (viene attivato se non è impostato 'footer')
 
 @description: imposta l'header e il footer del codice html
