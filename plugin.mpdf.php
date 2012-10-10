@@ -38,6 +38,25 @@ CREATE TABLE IF NOT EXISTS `style_print` (
   `onetable` enum('no','yes') CHARACTER SET utf8 NOT NULL DEFAULT 'no',
   PRIMARY KEY (`id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+
+ * Esempio:
+ * @code
+ * $pdf = new pdf(array('output'=>$output, 'debug'=>$this->_debug_doc));
+ * 
+ * $header = $this->headerPDF($img_dir);
+ * $footer = $this->footerPDF($img_dir);
+ * $buffer = $pdf->htmlStart(array('header'=>$header, 'footer'=>$footer));
+ * $buffer .= $this->htmlDoc($obj_pdf, $id);
+ * $buffer .= $pdf->htmlEnd();
+ * $html = $pdf->htmlCreate($buffer);
+ * 
+ * $filename = $this->fileName($id, array('type'=>'p'));
+ * if($output == 'file')
+ * {
+ *   $filename = $dir.'/'.$filename;
+ * }
+ * $pdf->createPDF($html, $filename, array('title'=>_("Progetto"), 'author'=>_("Otto Srl"));
+ * @endcode
  * 
  */
 class plugin_mpdf {
@@ -45,13 +64,16 @@ class plugin_mpdf {
 	private $_output, $_debug, $_tbl_style;
 	
 	/**
-	* @param array	options
-		output	string		(send|file!email)
-					send: invia il file inline al browser
-					file: salva localmente il file (indicare il percorso assoluto)
-					email: crea un file PDF e lo invia come allegato
-		debug	boolean		stampa a video il buffer
-		table	string		stile della tabella [IN SVILUPPO]
+	 * Costruttore
+	 * 
+	 * @param array	options
+	 *   array associativo di opzioni
+	 *   - @b output (string): tipo di output (default send)
+	 *     - @a send: invia il file inline al browser
+	 *     - @a file: salva localmente il file (indicare il percorso assoluto)
+	 *     - @a email: crea un file PDF e lo invia come allegato
+	 *   - @b debug (boolean): stampa a video il buffer (default false)
+	 *   - @b table (string): stile della tabella (default style_print) [IN SVILUPPO]
 	*/
 	function __construct($options=array()){
 		
@@ -73,55 +95,57 @@ class plugin_mpdf {
 	}
 	
 	/**
+	* Imposta l'header e il footer
 	* 
-	* @param array	options
-	* 	css			string		stili css personalizzati (diversi da css/mpdf.css, comunque inclusi di default)
-	* 	header		string		header personalizzato
-	* 	footer		string		footer personalizzato, stringhe sostitutive:
-	*							_NUMPAGE_	->	numero di pagina
-	*							_TOTPAGE_	->	numero totale di pagine
-	* 	number_page	boolean		stampa il numero di pagina (viene attivato se non è impostato 'footer')
-	*
+	* @param array options
+	*   - @b css_file (string): percorso a un file css (default css/mpdf.css)
+	*   - @b css_style (string): stili css personalizzati (in un tag style)
+	*   - @b header (string): header personalizzato
+	*   - @b footer (string): footer personalizzato, stringhe sostitutive:
+	*     - @a _NUMPAGE_, numero di pagina
+	*     - @a _TOTPAGE_, numero totale di pagine
+	*   - @b number_page (boolean): stampa il numero di pagina (viene attivato se non è impostato 'footer')
+	*  @return string
 	*
 	* @example
+	* @code
+	* //FILE CSS
+	* body {font-family: sans-serif; font-size: 10pt;}
+	* p {margin: 0pt;}
+	* td {vertical-align: top;}
+	* .items td {border-left: 0.1mm solid #000000; border-right: 0.1mm solid #000000;}
+	* table thead td { background-color: #EEEEEE; text-align: center; border: 0.1mm solid #000000;}
 	* 
-FILE CSS
-body {font-family: sans-serif; font-size: 10pt;}
-p {margin: 0pt;}
-td {vertical-align: top;}
-.items td {border-left: 0.1mm solid #000000; border-right: 0.1mm solid #000000;}
-table thead td { background-color: #EEEEEE; text-align: center; border: 0.1mm solid #000000;}
-
-HEADER
-$logo = "<img style=\"width:1.56cm;\" src=\"".$this->_doc_img_dir."/logo.jpg\" />";
-<table width=\"100%\" style=\"font-family:Arial,sans-serif; color:#999999;\"><tr>
-<td width=\"20%\" style=\"font-size:10pt;\">$logo</td>
-<td width=\"70%\" style=\"font-size:10pt; text-align:center;\">$header</td>
-<td width=\"10%\" style=\"text-align:right; font-size:8pt;\">Doc. n: $number<br />Rev. N. $revision</td>
-</tr></table>
-
-FOOTER
-<div style=\"border-top:1px solid #BDDAF1; padding-top:3mm;\">
-<table width=\"100%\" style=\"font-family:Arial,sans-serif; color:#999999;\"><tr>
-<td width=\"80%\" style=\"text-align:left; font-size:6pt;\">$footer</td>
-<td width=\"20%\" style=\"text-align:right; font-size:6pt;\">"._("Pagina")." _NUMPAGE_ "._("di")." _TOTPAGE_</td>
-</tr></table>
-</div>
+	* //HEADER
+	* $logo = "<img style=\"width:1.56cm;\" src=\"".$this->_doc_img_dir."/logo.jpg\" />";
+	* <table width=\"100%\" style=\"font-family:Arial,sans-serif; color:#999999;\"><tr>
+	* <td width=\"20%\" style=\"font-size:10pt;\">$logo</td>
+	* <td width=\"70%\" style=\"font-size:10pt; text-align:center;\">$header</td>
+	* <td width=\"10%\" style=\"text-align:right; font-size:8pt;\">Doc. n: $number<br />Rev. N. $revision</td>
+	* </tr></table>
+	* 
+	* //FOOTER
+	* <div style=\"border-top:1px solid #BDDAF1; padding-top:3mm;\">
+	* <table width=\"100%\" style=\"font-family:Arial,sans-serif; color:#999999;\"><tr>
+	* <td width=\"80%\" style=\"text-align:left; font-size:6pt;\">$footer</td>
+	* <td width=\"20%\" style=\"text-align:right; font-size:6pt;\">"._("Pagina")." _NUMPAGE_ "._("di")." _TOTPAGE_</td>
+	* </tr></table>
+	* </div>
+	* @endcode
 	*/
 	public function htmlStart($options=array()){
 		
-		$css = array_key_exists('css', $options) ? $options['css'] : '';
+		$css_file = array_key_exists('css_file', $options) ? $options['css_file'] : "css/mpdf.css";
+		$css_style = array_key_exists('css_style', $options) ? $options['css_style'] : '';
 		$header = array_key_exists('header', $options) ? $options['header'] : '';
 		$footer = array_key_exists('footer', $options) ? $options['footer'] : '';
 		$number_page = array_key_exists('number_page', $options) ? $options['number_page'] : true;
 		
 		$html = "<html>";
 		$html .= "<head>";
-		$html .= "<link href=\"css/mpdf.css\" type=\"text/css\" rel=\"stylesheet\" />";
-		if($css)
-		{
-			$html .= "<style>".$css."</style>";
-		}
+		$html .= "<link href=\"$css_file\" type=\"text/css\" rel=\"stylesheet\" />";
+		if($css_style)
+			$html .= "<style>".$css_style."</style>";
 		
 		$html .= "</head>";
 		$html .= "<body>\n";
@@ -168,6 +192,12 @@ mpdf-->";
 		return $html;
 	}
 	
+	/**
+	 * Crea un testo HTML compatibile con la generazione del PDF
+	 * 
+	 * @param string $html
+	 * @return string or print (debug)
+	 */
 	public function htmlCreate($html){
 		
 		$html = pdfHtmlToEntities($html);
@@ -183,18 +213,27 @@ mpdf-->";
 	}
 	
 	/**
+	 * Crea il PDF
 	 * 
-	 * @param string|array	$html		string	-> documento con pagine aventi la stessa struttura
-	 * 									array	-> documento con pagine che possono cambiare struttura (ad es. orientamento)
-	 * 									struttura array: array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
-	 * @param string		$filename
-	 * @param array			$options
-	 * 			landscape		boolean		imposta l'orientamento di default (false: portrait)
-	 * 			title			string		titolo del PDF
-	 * 			author			string		autore del PDF
-	 * 			creator			string		chi ha generato il PDF
-	 * 			watermark		boolean		scritta in sovraimpressione
-	 * 			watermark_text	string		testo della scritta in sovraimpressione
+	 * @param mixed $html
+	 *   - @a string, documento con pagine aventi la stessa struttura
+	 *   - @a array, documento con pagine che possono cambiare struttura (ad es. l'orientamento) - struttura: array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
+	 * @param string $filename
+	 * @param array $options
+	 *   array associativo di opzioni
+	 *   - @b landscape (boolean): imposta l'orientamento di default (default false -> portrait)
+	 *   - @b title (string): titolo del PDF
+	 *   - @b author (string): autore del PDF
+	 *   - @b creator (string): chi ha generato il PDF
+	 *   - @b watermark (boolean): scritta in sovraimpressione (default false)
+	 *   - @b watermark_text (string): testo della scritta in sovraimpressione
+	 * @return output
+	 * 
+	 * Esempio:
+	 * @code
+	 * $sequence = array($html1, array('orientation'=>'L', 'html'=>$html2));
+	 * $pdf->createPDF($sequence, $filename, array('title'=>_("Progetto"), 'author'=>_("Otto Srl"), 'creator'=>_("Marco Guidotti")));
+	 * @endcode
 	 */
 	public function createPDF($html, $filename, $options=array()){
 		
@@ -204,9 +243,6 @@ mpdf-->";
 		$creator = array_key_exists('creator', $options) ? $options['creator'] : '';
 		$watermark = array_key_exists('watermark', $options) ? $options['watermark'] : false;
 		$watermark_text = array_key_exists('watermark_text', $options) ? $options['watermark_text'] : _("esempio");
-		
-		//$orientation = $landscape ? 'L' : 'P';
-		//$mpdf=new mPDF('utf-8','A4','','',20,15,48,25,10,10, $orientation);
 		
 		if($landscape)
 			$mpdf=new mPDF('utf-8','A4-L');
@@ -273,10 +309,26 @@ mpdf-->";
 			exit();
 	}
 	
-	// Verificare se occorre utilizzare \n al posto di \r\n
+	/**
+	 * Crea il PDF e lo invia via email
+	 * 
+	 * @param string $html contenuto del file
+	 * @param string $filename nome del file allegato alla email
+	 * @param array $options
+	 *   array associativo di opzioni
+	 *   - @b send (boolean): invia il file anche al browser (default false)
+	 *   - @b mailto (string)
+	 *   - @b from_name (string)
+	 *   - @b from_mail (string)
+	 *   - @b replyto (string)
+	 *   - @b subject (string)
+	 *   - @b message (string)
+	 * @return void
+	 * 
+	 * @todo Verificare se occorre utilizzare \n al posto di \r\n
+	 */
 	public function emailPDF($html, $filename, $options=array()){
 		
-		// Spedisce il file anche al browser
 		$send = array_key_exists('send', $options) ? $options['send'] : false;
 		
 		$mailto = array_key_exists('mailto', $options) ? $options['mailto'] : '';
@@ -316,11 +368,22 @@ mpdf-->";
 		exit();
 	}
 	
+	/**
+	 * Break di pagina
+	 * 
+	 * @return string
+	 */
 	public function breakPage(){
 		
 		return "<pagebreak />";
 	}
 	
+	/**
+	 * Contenitore di testo
+	 * 
+	 * @param string $text
+	 * @return string
+	 */
 	public function longText($text){
 		
 		if(!empty($text))
@@ -330,12 +393,17 @@ mpdf-->";
 	}
 	
 	/**
-	 * @param string	$text
-	 * @param array		$options
-	 * 		class	string		es. 'label'
-	 * 		style	string		es. 'color:#000000; font-size:10px';
-	 * 		other	string
-	 * 		type	string		(text|textarea|editor)
+	 * @param string $text
+	 * @param array $options
+	 *   array associativo di opzioni
+	 *   - @b class (string): es. 'label'
+	 *   - @b style (string): es. 'color:#000000; font-size:10px';
+	 *   - @b other (string)
+	 *   - @b type (string): tipo di dato (default text)
+	 *     - @a text, richiama il metodo pdfChars()
+	 *     - @a textarea, richiama il metodo pdfChars_Textarea()
+	 *     - @a editor, richiama il metodo pdfTextChars()
+	 * @return string
 	 */
 	public function el($text, $options=array()){
 		
@@ -366,7 +434,9 @@ mpdf-->";
 		return $text;
 	}
 	
-	// Esempi
+	/**
+	 * Esempi
+	 */
 	private function table(){
 		
 		$ex1 = "<td colspan=\"2\" valign=\"top\" align=\"center\">$label5:<br />$value5</td>";
@@ -376,8 +446,8 @@ mpdf-->";
 	/**
 	 * Ogni elemento è una tabella
 	 * 
-	 * @param array		$data		sequenza di tag TD, ad esempio: array("<td width=\"10%\">"._("ID").": $countid</td>", "<td width=\"15%\">"._("Quantità").": $quantity</td>")
-	 * @param array		$options
+	 * @param array $data sequenza di tag TD, ad esempio: array("<td width=\"10%\">"._("ID").": $countid</td>", "<td width=\"15%\">"._("Quantità").": $quantity</td>")
+	 * @param array $options
 	 */
 	public function multiTable($data=array(), $options=array()){
 		
@@ -411,9 +481,9 @@ mpdf-->";
 	
 	/**
 	 * 
-	 * @param array		$data		elementi della tabella, ad esempio: array(array($record1_field1, $record1_field2), array($record2_field1, $record2_field2))
-	 * @param array		$header		intestazioni della tabella, ad esempio: array("<td width=\"5%\">"._("ID")."</td>", "<td width=\"10%\">"._("Quantità")."</td>")
-	 * @param array		$options
+	 * @param array $data elementi della tabella, ad esempio: array(array($record1_field1, $record1_field2), array($record2_field1, $record2_field2))
+	 * @param array $header intestazioni della tabella, ad esempio: array("<td width=\"5%\">"._("ID")."</td>", "<td width=\"10%\">"._("Quantità")."</td>")
+	 * @param array $options
 	 */
 	public function singleTable($data=array(), $header=array(), $options=array()){
 		
