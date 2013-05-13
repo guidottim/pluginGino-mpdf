@@ -1,45 +1,50 @@
 <?php
 /**
+ * @mainpage Libreria per la generazione dei file pdf
+ * 
  * Plugin per la creazione di file PDF con la libreria mPDF (http://www.mpdf1.com/mpdf/).
  * mPDF è una classe PHP che genera file PDF da codice HTML con Unicode/UTF-8 e supporto CJK.
- * gino è stato testato con la versione 5.4.
+ * gino è stato testato con la versione 5.6.
  * 
- * ========================
  * INSTALLAZIONE
- * ========================
+ * ---------------
  * 1. scaricare la libreria
- * 2. scompattare il file nella directory lib e rinominare la directory senza il numero di versione,
- * ad esempio: # mv MPDF54 MPDF
+ * 2. scompattare il file nella directory lib e rinominare la directory senza il numero di versione, ad esempio
+ * @code
+ * # mv MPDF56 MPDF
+ * @endcode
  * 3. copiare il file mpdf.css nella directory css.
  * 4. copiare il file func.mpdf.php nella directory lib.
  * 
- * ========================
- * Utilizzo
- * ========================
+ * UTILIZZO
+ * ---------------
  * Per attivare la classe occorre includerla all'inizio del file che genera il PDF:
+ * @code
  * require_once(PLUGIN_DIR.OS.'plugin.mpdf.php');
- *
- * ========================
- * Note
- * ========================
+ * @endcode
+ * 
+ * La classe fornisce gli strumenti per generare file pdf. In particolare prevede come output di:
+ * - inviare il file inline al browser
+ * - salvare localmente il file
+ * - creare il file e inviarlo come allegato
+ * Nel costruttore è inoltre possibile impostare come opzione la modalità debug.
+ * 
+ * NOTE
+ * ---------------
  * La libreria mPDF può richiedere una quantità di memoria maggiore del previsto.
  * Per ovviare all'inconveniente occorre inserire la direttiva memory_limit nell'apposito file di configurazione di apache:
+ * @code
  * php_admin_value memory_limit "32M"
+ * @endcode
  * 
- * ========================
- * [SVILUPPI] Tabella per personalizzare lo stile di tabella
- * ========================
+ * Se istanziare la classe genera degli errori PHP occorre inibire la stampa degli errori richiamando la funzione:
+ * @code
+ * error_reporting(0);
+ * @endcode
  * 
-CREATE TABLE IF NOT EXISTS `style_print` (
-  `id` smallint(2) NOT NULL AUTO_INCREMENT,
-  `reference` int(11) NOT NULL,
-  `tablename` varchar(50) NOT NULL,
-  `break` enum('no','yes') NOT NULL DEFAULT 'no',
-  `onetable` enum('no','yes') CHARACTER SET utf8 NOT NULL DEFAULT 'no',
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
-
- * Esempio:
+ * ESEMPI
+ * ---------------
+ * Esempio di utilizzo del plugin
  * @code
  * $pdf = new pdf(array('output'=>$output, 'debug'=>$this->_debug_doc));
  * 
@@ -58,10 +63,57 @@ CREATE TABLE IF NOT EXISTS `style_print` (
  * $pdf->createPDF($html, $filename, array('title'=>_("Progetto"), 'author'=>_("Otto Srl"));
  * @endcode
  * 
+ * Esempi di celle di tabella
+ * @code
+ * <td colspan="2" valign="top" align="center">text_label:<br />text_value</td>
+ * <td width="50%" valign="top" rowspan="2">text_label:<br />text_value</td>
+ * @endcode
+ * 
+ * IN SVILUPPO
+ * ---------------
+ * ###Gestione di una tabella per personalizzare lo stile di tabella
+ * @code
+ * CREATE TABLE IF NOT EXISTS `style_print` (
+ *   `id` smallint(2) NOT NULL AUTO_INCREMENT,
+ *   `reference` int(11) NOT NULL,
+ *   `tablename` varchar(50) NOT NULL,
+ *   `break` enum('no','yes') NOT NULL DEFAULT 'no',
+ *   `onetable` enum('no','yes') CHARACTER SET utf8 NOT NULL DEFAULT 'no',
+ *   PRIMARY KEY (`id`)
+ * ) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
+ * @endcode
+ */
+
+/**
+ * @file plugin.mpdf.php
+ * @brief Classe per la generazione di file pdf
+ * 
+ * @copyright 2005 Otto srl (http://www.opensource.org/licenses/mit-license.php) The MIT License
+ * @author marco guidotti guidottim@gmail.com
+ * @author abidibo abidibo@gmail.com
  */
 class plugin_mpdf {
 	
-	private $_output, $_debug, $_tbl_style;
+	/**
+	 * Tipo di output
+	 * 
+	 * @var string
+	 */
+	private $_output;
+	
+	/**
+	 * Modalità debug
+	 * 
+	 * @var boolean
+	 */
+	private $_debug;
+	
+	/**
+	 * Stile della tabella
+	 * 
+	 * @var string
+	 */
+	private $_tbl_style;
 	
 	/**
 	 * Costruttore
@@ -217,16 +269,27 @@ mpdf-->";
 	 * 
 	 * @param mixed $html
 	 *   - @a string, documento con pagine aventi la stessa struttura
-	 *   - @a array, documento con pagine che possono cambiare struttura (ad es. l'orientamento) - struttura: array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
+	 *   - @a array, documento con pagine che possono cambiare struttura, come l'orientamento; struttura dell'array:
+	 *     array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
 	 * @param string $filename
 	 * @param array $options
 	 *   array associativo di opzioni
-	 *   - @b landscape (boolean): imposta l'orientamento di default (default false -> portrait)
 	 *   - @b title (string): titolo del PDF
 	 *   - @b author (string): autore del PDF
 	 *   - @b creator (string): chi ha generato il PDF
 	 *   - @b watermark (boolean): scritta in sovraimpressione (default false)
-	 *   - @b watermark_text (string): testo della scritta in sovraimpressione
+	 *   - @b watermark_text (string): testo della scritta in sovraimpressione (default 'esempio')
+	 *   - @b landscape (boolean): orientamento orizzontale della pagina (default false)
+	 *   - @b mode (string): codifica del testo (default utf-8)
+	 *   - @b font_size (integer)
+	 *   - @b font (string)
+	 *   - @b top-margin (integer): distance in mm from top of page to start of text (ignoring any headers)
+	 *   - @b header-margin (integer): distance in mm from top of page to start of header
+	 *   - @b bottom-margin (integer): distance in mm from bottom of page to bottom of text (ignoring any footers)
+	 *   - @b footer-margin (integer): distance in mm from bottom of page to bottom of footer
+	 *   - @b orientation (string): specifica l'orientamento di una nuova pagina; i valori accettati sono:
+	 *     - L, landscape
+	 *     - P, portrait (default)
 	 * @return output
 	 * 
 	 * Esempio:
@@ -237,19 +300,47 @@ mpdf-->";
 	 */
 	public function createPDF($html, $filename, $options=array()){
 		
-		$landscape = array_key_exists('landscape', $options) ? $options['landscape'] : false;
 		$title = array_key_exists('title', $options) ? $options['title'] : '';
 		$author = array_key_exists('author', $options) ? $options['author'] : '';
 		$creator = array_key_exists('creator', $options) ? $options['creator'] : '';
 		$watermark = array_key_exists('watermark', $options) ? $options['watermark'] : false;
 		$watermark_text = array_key_exists('watermark_text', $options) ? $options['watermark_text'] : _("esempio");
+		$landscape = array_key_exists('landscape', $options) ? $options['landscape'] : false;
+		$mode = array_key_exists('mode', $options) ? $options['mode'] : 'utf-8';
+		$default_font_size = array_key_exists('font_size', $options) ? $options['font_size'] : 0;
+		$default_font = array_key_exists('font', $options) ? $options['font'] : '';
+		$orientation = array_key_exists('orientation', $options) ? $options['orientation'] : 'P';
 		
-		if($landscape)
-			$mpdf=new mPDF('utf-8','A4-L');
-		else
-			$mpdf=new mPDF('utf-8','A4','','',20,15,48,25,10,10);
+		$format = $landscape ? 'A4-L' : 'A4';
 		
-		$mpdf->useOnlyCoreFonts = true;    // false is default
+		if($format == 'A4')
+		{
+			$left_margin = 20;
+			$right_margin = 15;
+			$top_margin = 48;
+			$bottom_margin = 25;
+			$header_margin = 10;
+			$footer_margin = 10;
+		}
+		else	// Valori di default come nel costruttore della classe mpdf
+		{
+			$left_margin = 15;
+			$right_margin = 15;
+			$top_margin = 16;
+			$bottom_margin = 16;
+			$header_margin = 9;
+			$footer_margin = 9;
+		}
+		
+		// Personalizzazione dei parametri
+		if(array_key_exists('top-margin', $options) && !is_null($options['top-margin'])) $top_margin = $options['top-margin'];
+		if(array_key_exists('header-margin', $options) && !is_null($options['header-margin'])) $header_margin = $options['header-margin'];
+		if(array_key_exists('bottom-margin', $options) && !is_null($options['bottom-margin'])) $bottom_margin = $options['bottom-margin'];
+		if(array_key_exists('footer-margin', $options) && !is_null($options['footer-margin'])) $footer_margin = $options['footer-margin'];
+		
+		$mpdf=new mPDF($mode, $format, $default_font_size, $default_font, $left_margin, $right_margin, $top_margin, $bottom_margin, $header_margin, $footer_margin, $footer_margin, $orientation);
+		
+		$mpdf->useOnlyCoreFonts = true;    // default false
 		$mpdf->SetProtection(array('print'));
 		$mpdf->SetTitle($title);
 		$mpdf->SetAuthor($author);
@@ -280,15 +371,15 @@ mpdf-->";
 				{
 					if(is_array($pages[$i]))
 					{
-						$orientation = array_key_exists('orientation', $pages[$i]) ? $pages[$i]['orientation'] : 'P';
+						$orientation_page = array_key_exists('orientation', $pages[$i]) ? $pages[$i]['orientation'] : 'P';
 						$html = array_key_exists('html', $pages[$i]) ? $pages[$i]['html'] : '';
 					}
 					else
 					{
-						$orientation = $landscape ? 'L' : 'P';
+						$orientation_page = $landscape ? 'L' : 'P';
 						$html = $pages[$i];
 					}
-					$mpdf->AddPageByArray(array('orientation'=>$orientation));
+					$mpdf->AddPageByArray(array('orientation'=>$orientation_page));
 					$mpdf->WriteHTML($html);
 				}
 			}
@@ -393,12 +484,14 @@ mpdf-->";
 	}
 	
 	/**
+	 * Gestione del testo
+	 * 
 	 * @param string $text
 	 * @param array $options
 	 *   array associativo di opzioni
-	 *   - @b class (string): es. 'label'
-	 *   - @b style (string): es. 'color:#000000; font-size:10px';
-	 *   - @b other (string)
+	 *   - @b class (string): classe del tag span, es. 'label'
+	 *   - @b style (string): stile del tag span, es. 'color:#000000; font-size:10px';
+	 *   - @b other (string): altro nel tag span
 	 *   - @b type (string): tipo di dato (default text)
 	 *     - @a text, richiama il metodo pdfChars()
 	 *     - @a textarea, richiama il metodo pdfChars_Textarea()
@@ -435,19 +528,12 @@ mpdf-->";
 	}
 	
 	/**
-	 * Esempi
-	 */
-	private function table(){
-		
-		$ex1 = "<td colspan=\"2\" valign=\"top\" align=\"center\">$label5:<br />$value5</td>";
-		$ex2 = "<td width=\"50%\" valign=\"top\" rowspan=\"2\">$label1:<br />$value1</td>";
-	}
-	
-	/**
 	 * Ogni elemento è una tabella
 	 * 
 	 * @param array $data sequenza di tag TD, ad esempio: array("<td width=\"10%\">"._("ID").": $countid</td>", "<td width=\"15%\">"._("Quantità").": $quantity</td>")
 	 * @param array $options
+	 *   array associativo di opzioni
+	 * @return string
 	 */
 	public function multiTable($data=array(), $options=array()){
 		
@@ -531,7 +617,7 @@ mpdf-->";
 	}
 	
 	/*
-	 * 	Opzioni di stampa (DA METTERE A POSTO)
+	 * 	Opzioni di stampa (TODO)
 	 */
 	
 	private function jsLib() {
@@ -553,17 +639,18 @@ mpdf-->";
 		return $GINO;
 	}
 	
-	/*
+	/**
 	 * Valori di stampa
 	 * 
 	 * Es. di utilizzo:
-if($this->stylePrint($ref, 'break', $table) == 'yes')
-	$GINO .= "<pagebreak />";
-
-if($this->stylePrint($ref, 'onetable', $table) == 'yes')
-	$GINO .= $this->singleTable($data, $header, $options);
-else
-	$GINO .= $this->multiTable($data, $options);
+	 * @code
+	 * if($this->stylePrint($ref, 'break', $table) == 'yes')
+	 *   $GINO .= "<pagebreak />";
+	 * if($this->stylePrint($ref, 'onetable', $table) == 'yes')
+	 *   $GINO .= $this->singleTable($data, $header, $options);
+	 * else
+	 *   $GINO .= $this->multiTable($data, $options);
+	 * @endcode
 	 */
 	private function stylePrint($reference, $field, $table){
 		
@@ -587,8 +674,6 @@ else
 	}
 	
 	public function formStylePrint($reference=0, $key='', $table='', $div='', $method='', $params=''){
-		
-		$this->accessGroup($this->_group_1);
 		
 		if(empty($reference) AND empty($key))
 		{
@@ -659,8 +744,6 @@ else
 	}
 	
 	public function  actionStylePrint(){
-		
-		$this->accessGroup($this->_group_1);
 		
 		$reference = cleanVar($_POST, 'ref', 'int', '');
 		$id = cleanVar($_POST, 'id', 'int', '');
