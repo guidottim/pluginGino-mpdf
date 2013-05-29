@@ -32,7 +32,7 @@
  * NOTE
  * ---------------
  * La libreria mPDF può richiedere una quantità di memoria maggiore del previsto.
- * Per ovviare all'inconveniente occorre inserire la direttiva memory_limit nell'apposito file di configurazione di apache:
+ * Per ovviare all'inconveniente occorre inserire la direttiva @a memory_limit nell'apposito file di configurazione di apache:
  * @code
  * php_admin_value memory_limit "32M"
  * @endcode
@@ -62,6 +62,8 @@
  * }
  * $pdf->createPDF($html, $filename, array('title'=>_("Progetto"), 'author'=>_("Otto Srl"));
  * @endcode
+ * 
+ * Per non stampare il footer occorre impostare il parametro @a footer a  @a false in htmlStart().
  * 
  * Esempi di celle di tabella
  * @code
@@ -126,7 +128,7 @@ class plugin_mpdf {
 	 *     - @a email: crea un file PDF e lo invia come allegato
 	 *   - @b debug (boolean): stampa a video il buffer (default false)
 	 *   - @b table (string): stile della tabella (default style_print) [IN SVILUPPO]
-	*/
+	 */
 	function __construct($options=array()){
 		
 		require_once(LIB_DIR.OS."MPDF".OS."mpdf.php");
@@ -153,10 +155,12 @@ class plugin_mpdf {
 	*   - @b css_file (string): percorso a un file css (default css/mpdf.css)
 	*   - @b css_style (string): stili css personalizzati (in un tag style)
 	*   - @b header (string): header personalizzato
-	*   - @b footer (string): footer personalizzato, stringhe sostitutive:
-	*     - @a _NUMPAGE_, numero di pagina
-	*     - @a _TOTPAGE_, numero totale di pagine
-	*   - @b number_page (boolean): stampa il numero di pagina (viene attivato se non è impostato 'footer')
+	*   - @b footer (mixed):
+	*     - boolean, col valore @a false il footer non viene mostrato
+	*     - string, footer personalizzato, sono implementate le stringhe sostitutive:
+	*       - @a _NUMPAGE_, numero di pagina
+	*       - @a _TOTPAGE_, numero totale di pagine
+	*     - in tutti gli altri casi viene mostrato il footer standard
 	*  @return string
 	*
 	* @example
@@ -191,7 +195,6 @@ class plugin_mpdf {
 		$css_style = array_key_exists('css_style', $options) ? $options['css_style'] : '';
 		$header = array_key_exists('header', $options) ? $options['header'] : '';
 		$footer = array_key_exists('footer', $options) ? $options['footer'] : '';
-		$number_page = array_key_exists('number_page', $options) ? $options['number_page'] : true;
 		
 		$html = "<html>";
 		$html .= "<head>";
@@ -202,7 +205,11 @@ class plugin_mpdf {
 		$html .= "</head>";
 		$html .= "<body>\n";
 		
-		if($footer)
+		if(is_bool($footer) && $footer===false)
+		{
+			$footer = '';
+		}
+		elseif(is_string($footer) && $footer)
 		{
 			if(preg_match('#_NUMPAGE_#', $footer))
 				$footer = preg_replace('#_NUMPAGE_#', '{PAGENO}', $footer);
@@ -211,14 +218,7 @@ class plugin_mpdf {
 		}
 		else
 		{
-			if($number_page)
-			{
-				$footer = "
-<div style=\"border-top: 1px solid #000000; font-size: 6pt; text-align: center; padding-top: 3mm; \">
-Page {PAGENO} of {nb}
-</div>
-				";
-			}
+			$footer = $this->defaultFooter();
 		}
 		$html .= "
 <!--mpdf
@@ -237,6 +237,25 @@ mpdf-->";
 		return $html;
 	}
 	
+	/**
+	 * Footer standard
+	 * 
+	 * @return string
+	 */
+	public function defaultFooter() {
+		
+		$footer = "
+<div style=\"border-top: 1px solid #000000; font-size: 6pt; text-align: center; padding-top: 3mm; \">
+"._("Pagina")." {PAGENO} "._("di")." {nb}
+</div>";
+		return $footer;
+	}
+	
+	/**
+	 * Chiusura del testo html
+	 * 
+	 * @return string
+	 */
 	public function htmlEnd(){
 		
 		$html = "</body>\n";
