@@ -70,27 +70,21 @@
  * <td colspan="2" valign="top" align="center">text_label:<br />text_value</td>
  * <td width="50%" valign="top" rowspan="2">text_label:<br />text_value</td>
  * @endcode
- * 
- * IN SVILUPPO
- * ---------------
- * ###Gestione di una tabella per personalizzare lo stile di tabella
- * @code
- * CREATE TABLE IF NOT EXISTS `style_print` (
- *   `id` smallint(2) NOT NULL AUTO_INCREMENT,
- *   `reference` int(11) NOT NULL,
- *   `tablename` varchar(50) NOT NULL,
- *   `break` enum('no','yes') NOT NULL DEFAULT 'no',
- *   `onetable` enum('no','yes') CHARACTER SET utf8 NOT NULL DEFAULT 'no',
- *   PRIMARY KEY (`id`)
- * ) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
- * @endcode
  */
 
 /**
  * @file plugin.mpdf.php
+ * @brief Contiene la classe plugin_mpdf
+ * 
+ * @copyright 2013 Otto srl (http://www.opensource.org/licenses/mit-license.php) The MIT License
+ * @author marco guidotti guidottim@gmail.com
+ * @author abidibo abidibo@gmail.com
+ */
+
+/**
  * @brief Classe per la generazione di file pdf
  * 
- * @copyright 2005 Otto srl (http://www.opensource.org/licenses/mit-license.php) The MIT License
+ * @copyright 2013 Otto srl (http://www.opensource.org/licenses/mit-license.php) The MIT License
  * @author marco guidotti guidottim@gmail.com
  * @author abidibo abidibo@gmail.com
  */
@@ -127,7 +121,6 @@ class plugin_mpdf {
 	 *     - @a file: salva localmente il file (indicare il percorso assoluto)
 	 *     - @a email: crea un file PDF e lo invia come allegato
 	 *   - @b debug (boolean): stampa a video il buffer (default false)
-	 *   - @b table (string): stile della tabella (default style_print) [IN SVILUPPO]
 	 */
 	function __construct($options=array()){
 		
@@ -136,7 +129,6 @@ class plugin_mpdf {
 		
 		$this->_output = array_key_exists('output', $options) ? $options['output'] : 'send';
 		$this->_debug = array_key_exists('debug', $options) ? $options['debug'] : false;
-		$this->_tbl_style = array_key_exists('table', $options) ? $options['table'] : 'style_print';
 		
 		if($this->_output == 'file')
 			$this->_output = 'F';
@@ -547,11 +539,18 @@ mpdf-->";
 	}
 	
 	/**
-	 * Ogni elemento è una tabella
+	 * A partire da un insieme di dati gestisce ogni elemento come una tabella
 	 * 
-	 * @param array $data sequenza di tag TD, ad esempio: array("<td width=\"10%\">"._("ID").": $countid</td>", "<td width=\"15%\">"._("Quantità").": $quantity</td>")
+	 * @param array $data sequenza di tag TD, ad esempio:
+	 * @code
+	 * array("<td width=\"10%\">"._("ID").": $countid</td>", "<td width=\"15%\">"._("Quantità").": $quantity</td>")
+	 * @endcode
 	 * @param array $options
 	 *   array associativo di opzioni
+	 *   - @b class (string)
+	 *   - @b style (string)
+	 *   - @b autosize (integer)
+	 *   - @b border (integer)
 	 * @return string
 	 */
 	public function multiTable($data=array(), $options=array()){
@@ -585,10 +584,20 @@ mpdf-->";
 	}
 	
 	/**
+	 * A partire da un insieme di dati gestisce ogni elemento come una riga di una unica tabella
 	 * 
-	 * @param array $data elementi della tabella, ad esempio: array(array($record1_field1, $record1_field2), array($record2_field1, $record2_field2))
-	 * @param array $header intestazioni della tabella, ad esempio: array("<td width=\"5%\">"._("ID")."</td>", "<td width=\"10%\">"._("Quantità")."</td>")
+	 * @param array $data elementi della tabella, tipo array(array($record1_field1, $record1_field2), array($record2_field1, $record2_field2))
+	 * @param array $header intestazioni della tabella, ad esempio:
+	 * @code
+	 * array("<td width=\"5%\">"._("ID")."</td>", "<td width=\"10%\">"._("Quantità")."</td>")
+	 * @endcode
 	 * @param array $options
+	 *   array associativo di opzioni
+	 *   - @b class (string)
+	 *   - @b style (string)
+	 *   - @b autosize (integer)
+	 *   - @b border (integer)
+	 * @return string
 	 */
 	public function singleTable($data=array(), $header=array(), $options=array()){
 		
@@ -620,6 +629,7 @@ mpdf-->";
 		{
 			foreach($data AS $record)
 			{
+				$GINO .= "<tr>";
 				if(sizeof($record) > 0)
 				{
 					foreach($record AS $field)
@@ -627,196 +637,13 @@ mpdf-->";
 						$GINO .= "<td valign=\"top\">".$field."</td>";
 					}
 				}
+				$GINO .= "</tr>";
 			}
 		}
 		$GINO .= "</tbody>";
 		$GINO .= "</table>";
 		
 		return $GINO;
-	}
-	
-	/*
-	 * 	Opzioni di stampa (TODO)
-	 */
-	
-	private function jsLib() {
-	
-		$GINO = '';
-		$GINO .= "<script type=\"text/javascript\">\n";
-		$GINO .= "function stylePrint(ref, table, result, method, params) {
-			
-			var call = 'formStylePrint';
-			showDiv(result);
-			
-			var url = '".$this->_home."?pt[".$this->_className."-'+call+']';
-			var data = 'ref='+ref+'&tbl='+table+'&m='+method+'&p='+params;
-			sendPost(url, data, result, '', true);
-		};\n";
-		
-		$GINO .= "</script>\n";
-		
-		return $GINO;
-	}
-	
-	/**
-	 * Valori di stampa
-	 * 
-	 * Es. di utilizzo:
-	 * @code
-	 * if($this->stylePrint($ref, 'break', $table) == 'yes')
-	 *   $GINO .= "<pagebreak />";
-	 * if($this->stylePrint($ref, 'onetable', $table) == 'yes')
-	 *   $GINO .= $this->singleTable($data, $header, $options);
-	 * else
-	 *   $GINO .= $this->multiTable($data, $options);
-	 * @endcode
-	 */
-	private function stylePrint($reference, $field, $table){
-		
-		if($field == 'break')
-			$default = 'no';
-		elseif($field == 'onetable')
-			$default = 'no';
-		else
-			$default = 'no';
-		
-		$query = "SELECT $field FROM ".$this->_tbl_style." WHERE reference='$reference' AND tablename='$table'";
-		$a = $this->_db->selectquery($query);
-		if(sizeof($a) > 0)
-		{
-			foreach($a AS $b)
-			{
-				return $b[$field];
-			}
-		}
-		return $default;
-	}
-	
-	public function formStylePrint($reference=0, $key='', $table='', $div='', $method='', $params=''){
-		
-		if(empty($reference) AND empty($key))
-		{
-			$reference = cleanVar($_POST, 'ref', 'int', '');
-			$key = cleanVar($_POST, $this->_param_step, 'string', '');
-			$table = cleanVar($_POST, 'tbl', 'string', '');
-			$div = cleanVar($_POST, 'div', 'string', '');
-			$method = cleanVar($_POST, 'm', 'string', '');
-			$params = cleanVar($_POST, 'p', 'string', '');
-			$ajax = true;
-		}
-		else $ajax = false;
-		
-		$GINO = '';
-		
-		$GINO .= "<div class=\"boxform\">\n";
-		$this->_gform = new GinoForm('gform_st', 'post', false);
-		$this->_gform->load('dataform_st');
-		
-		$query = "SELECT id, break_prod, table_prod FROM ".$this->_tbl_style_print." WHERE reference='$reference' AND tablename='$table'";
-		$a = $this->_db->selectquery($query);
-		if(sizeof($a) > 0)
-		{
-			foreach($a AS $b)
-			{
-				$id = $b['id'];
-				$break_prod = $b['break_prod'];
-				$table_prod = $b['table_prod'];
-				$action = $this->_act_modify;
-				$submit = _("modifica");
-			}
-		}
-		else
-		{
-			$id = 0;
-			$break_prod = '';
-			$table_prod = '';
-			$action = $this->_act_insert;
-			$submit = _("crea il record");
-		}
-		
-		$link_close = $ajax ? $this->linkClose($div) : '';
-		$ref_number = $this->_db->getFieldFromId($table, 'number', 'id', $reference);
-		
-		$GINO .= "<div class=\"area_title_a\">\n";
-		$GINO .= "<div class=\"area_title_sx_a\">"._("Impostazioni stampa")." '$ref_number'</div>\n";
-		$GINO .= "<div class=\"area_title_dx_a\">$link_close</div>\n";
-		$GINO .= "<div class=\"null\"></div>\n";
-		$GINO .= "</div>\n";
-		
-		$GINO .= "<div class=\"form\">\n";
-		$GINO .= $this->_gform->form($this->_home."?pt[".$this->_className."-actionStylePrint]", '', '');
-		$GINO .= $this->_gform->input('id', $id, 'hidden', '', '', '');
-		$GINO .= $this->_gform->input('ref', $reference, 'hidden', '', '', '');
-		$GINO .= $this->_gform->input('tbl', $table, 'hidden', '', '', '');
-		$GINO .= $this->_gform->input('action', $action, 'hidden', '', '', '');
-		$GINO .= $this->_gform->input('method', $method, 'hidden', '', '', '');
-		$GINO .= $this->_gform->input('params', $params, 'hidden', '', '', '');
-		
-		$array =  array('yes'=>_("si"), 'no'=>_("no"));
-		$GINO .= $this->_gform->radio('break', $break_prod, _("Break page prima della tabella prodotti"), 'req', '', '', 'array', $array, 'no', 'h', '');
-		$GINO .= $this->_gform->radio('onetable', $table_prod, _("Prodotti in un'unica tabella"), 'req', '', '', 'array', $array, 'no', 'h', '');
-		$GINO .= $this->_gform->cinput('submit', $submit, '', '', '', '', 'submit', 0, 0, '');
-		$GINO .= $this->_gform->cform();
-		$GINO .= "</div>\n";
-		
-		return $GINO;
-	}
-	
-	public function  actionStylePrint(){
-		
-		$reference = cleanVar($_POST, 'ref', 'int', '');
-		$id = cleanVar($_POST, 'id', 'int', '');
-		$table = cleanVar($_POST, 'tbl', 'string', '');
-		$action = cleanVar($_POST, 'action', 'string', '');
-		$method = cleanVar($_POST, 'method', 'string', '');
-		$params = cleanVar($_POST, 'params', 'string', '');
-		
-		$break = cleanVar($_POST, 'break', 'string', '');
-		$onetable = cleanVar($_POST, 'onetable', 'string', '');
-		
-		// Return
-		$link = $this->setParams($params);
-		if(!empty($link)) $link_error = $link.'&'; else $link_error = $link;
-		
-		$redirect = $this->setRedirect($method);
-		// End
-		
-		$this->_gform = new GinoForm('gform_st','post', true);
-		$this->_gform->save('dataform_st');
-		$req_error = $this->_gform->arequired();
-		
-		if($req_error > 0)
-		EvtHandler::HttpCall($this->_home, $redirect, $link_error."error=01");
-		
-		if($action == $this->_act_insert AND empty($id))
-		{
-			$query_control = "SELECT id FROM ".$this->_tbl_style_print." WHERE reference='$reference' AND tablename='$table'";
-			$a = $this->_db->selectquery($query_control);
-			if(sizeof($a) > 0)
-				EvtHandler::HttpCall($this->_home, $redirect, $link_error.'error=09');
-			
-			$query = "INSERT INTO ".$this->_tbl_style_print." (id, reference, tablename, break, onetable)
-			VALUES ($id, $reference, '$table', '$break', '$onetable')";
-			$result = $this->_db->actionquery($query);
-		}
-		elseif($action == $this->_act_modify AND !empty($id))
-		{
-			$query = "UPDATE ".$this->_tbl_style_print." SET break='$break', onetable='$onetable' WHERE id='$id'";
-			$result = $this->_db->actionquery($query);
-		}
-		else
-		{
-			$result = false;
-		}
-		
-		if($result)
-		{
-			EvtHandler::HttpCall($this->_home, $redirect, $link);
-		}
-		else
-		{
-			EvtHandler::HttpCall($this->_home, $redirect, $link_error.'error=09');
-		}
 	}
 }
 ?>
