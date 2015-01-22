@@ -2,7 +2,8 @@ pluginGino-mpdf
 ================
 
 Plugin per [gino CMS](https://github.com/otto-torino/gino) per la creazione di file PDF con la libreria mPDF (http://www.mpdf1.com/mpdf/).   
-mPDF è una classe PHP che genera file PDF da codice HTML con Unicode/UTF-8 e supporto CJK. gino è stato testato con la versione 6.0.0 della libreria.
+mPDF è una classe PHP che genera file PDF da codice HTML con Unicode/UTF-8 e supporto CJK. gino è stato testato con la versione 6.0.0 della libreria.   
+È richiesta una versione di **gino >= 2.0.0**.
 
 # Installazione
 
