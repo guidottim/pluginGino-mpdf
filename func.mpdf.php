@@ -1,13 +1,71 @@
 <?php
-/*
-	HTML entities conversion (but not tags conversion)
-*/
+/**
+ * APPUNTI PER LA GESTIONE DELLE STRINGHE
+ * ---------------
+ * 
+ * ###iconv()
+ * iconv() converte la stringa codificata nel parametro stringa in in_charset nella stringa codificata in out_charset. Restituisce la stringa convertita o FALSE, se fallisce.
+ * @code
+ * string iconv (string $in_charset , string $out_charset , string $str)
+ * @endcode
+ * dove @a in_charset è l'input charset, @a out_charset l'output charset e @a str la stringa che deve essere convertita.
+ * 
+ * Se si aggiunge la stringa //TRANSLIT a out_charset viene attivata la traslitterazione. 
+ * Ciò significa che quando un carattere non può essere rappresentato nel charset di destinazione, può essere approssimato attraverso uno o più caratteri simili alla vista. \n
+ * Se si aggiunge la stringa //IGNORE, i caratteri che non possono essere rappresentati nel charset di destinazione vengono scartati silenziosamente.
+ * In caso contrario, la stringa (str) viene tagliata dal primo carattere illegale e viene generato un E_NOTICE.
+ * 
+ * Il parametro //IGNORE vale soltanto per la codifica di output. Ciò significa che se (e solo se) l'ingresso è codificato correttamente, 
+ * iconv può (e solo allora può) cambiarlo a un'altra codifica. \n
+ * Se poi la codifica di uscita non può codificare un codice-punto che è disponibile nella codifica di ingresso, allora il codice-punto sarà rifiutato. \n
+ * //IGNORE è solo un flag che indica come trattare la mancanza dei codice-punti nella codifica di output.
+ * 
+ * @see http://php.net/manual/en/function.iconv.php
+ * The main problem here is that when your string contains illegal UTF-8 characters, there is no really straight forward way to handle those. \n
+ * iconv() simply (and silently!) terminates the string when encountering the problematic characters (also if using //IGNORE), returning a clipped string.
+ * The output character set (the second parameter) should be different from the input character set (first param).
+ * If they are the same, then if there are illegal UTF-8 characters in the string, iconv will reject them as being illegal according to the input character set.
+ * 
+ * ###htmlentities()
+ * htmlentities() crea problemi con l'impostazione del charset 'UTF-8' quando il database ha come collation @a latin1. \n
+ * Nel caso di problemi (ad esempio la creazione di un file pdf costituito unicamente da una pagina bianca) 
+ * verificare che tutti i dati in arrivo dal database vengano gestiti attraverso l'interfaccia di gestione delle stringhe plugin_mpdf::text().
+ */
 
+/**
+ * @file func.mpdf.php
+ * @brief Racchiude le librerie per il trattamento di stringhe e dei valori da database in pdf
+ *
+ * @copyright 2005-2015 Otto srl (http://www.opensource.org/licenses/mit-license.php) The MIT License
+ * @author marco guidotti guidottim@gmail.com
+ * @author abidibo abidibo@gmail.com
+ */
+namespace Gino;
+
+/**
+ * Formattazione del testo da html a pdf
+ * 
+ * @param string $string
+ * @return string
+ */
+function htmlToPdf($string) {
+	
+	$string = htmlentities($string, ENT_QUOTES, 'UTF-8');
+	
+	return htmlspecialchars_decode($string);
+}
+
+/**
+ * Gestione delle stringhe salvate in campi trattati con tag input (char, varchar)
+ * 
+ * @param string $string
+ * @return string
+ */
 function pdfChars($string, $openclose=false)
 {
 	$string = trim($string);
 	$string = stripslashes($string);
-	//$string = utf8_encode($string);	// DB latin1
+	$string = convertToHtml($string);
 
 	$string = str_replace ('&euro;', '€', $string);
 	$string = str_replace ('&', '&amp;', $string);
@@ -23,12 +81,17 @@ function pdfChars($string, $openclose=false)
 	return $string;
 }
 
-// Textarea (descriptions)
+/**
+ * Gestione delle stringhe salvate in campi trattati con tag textarea (text)
+ * 
+ * @param string $string
+ * @return string
+ */
 function pdfChars_Textarea($string)
 {
 	$string = trim($string);
 	$string = stripslashes($string);
-	//$string = utf8_encode($string);	// DB latin1
+	$string = convertToHtml($string);
 	
 	$string = str_replace ('&euro;', '€', $string);
 	$string = str_replace ('&bull;', '•', $string);
@@ -39,12 +102,17 @@ function pdfChars_Textarea($string)
 	return $string;
 }
 
-// CKEditor: Paste As plain text
+/**
+ * Gestione delle stringhe salvate in campi trattati con l'editor CKEditor (text)
+ * 
+ * @param string $string
+ * @return string
+ */
 function pdfTextChars($string)
 {
 	$string = trim($string);
 	$string = stripslashes($string);
-	//$string = utf8_encode($string);	// -> DB latin1
+	$string = convertToHtml($string);
 	
 	// Eliminare i commenti HTML
 	$string = preg_replace("#(\n*)#", "", $string);
@@ -59,14 +127,16 @@ function pdfTextChars($string)
 	//$string = preg_replace("/:/", "&#58;", $string);
 	//$string = str_replace(':', "&#58;", $string);
 	
-	$string = htmlentities($string, ENT_QUOTES, 'UTF-8');	// tutte entities
+	// conversione in entities
+	$string = htmlentities($string, ENT_QUOTES, 'UTF-8');
+	// riconversione di alcune entities
 	$string = preg_replace('#&lt;([a-zA-Z]+)&gt;#', "<$1>", $string);	// <p>
 	$string = preg_replace('#&lt;/([a-zA-Z]+)&gt;#', "</$1>", $string);	// </p>
 	//$string = preg_replace('#/&gt;#', '/>', $string);					// />
 	$string = preg_replace("#&lt;([a-zA-Z]+)[\s]+[\w]*/&gt;#", "<$1 />", $string);	// <br />
 	$string = preg_replace("#&lt;([a-zA-Z]+)[\s]+(id|class|lang)=&quot;[\w\.\-]*&quot;[\s]*&gt;#", "<$1>", $string);	// <span id="...">
 	
-	// Per risolvere i problemi nel riconoscere la fine del tag B quando è in prossimità di un BR
+	// per risolvere i problemi nel riconoscere la fine del tag 'b' quando è in prossimità di un 'br'
 	$string = preg_replace("#><br />#", ">\n<br />", $string);
 	$string = preg_replace("#<br />\n(<[a-zA-Z]+>)#", "$1\n<br />", $string);
 	
@@ -80,6 +150,12 @@ function pdfTextChars($string)
 	return $string;
 }
 
+/**
+ * Adatta il testo per il pdf
+ * 
+ * @param string $str
+ * @return string
+ */
 function pdfHtmlToEntities($str){
 	
 	//$txt = normalize_special_characters($str);
@@ -91,6 +167,13 @@ function pdfHtmlToEntities($str){
 	return $txt;
 }
 
+/**
+ * Normalizza alcuni caratteri speciali
+ * 
+ * @param string $str
+ * @param boolean $unwanted indica se convertire i caratteri alfabetici accentati in caratteri non accentati (default false)
+ * @return string
+ */
 function normalize_special_characters($str, $unwanted=false)
 {
 	# Quotes cleanup
