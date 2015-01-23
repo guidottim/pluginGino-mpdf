@@ -63,7 +63,7 @@
  * require_once(PLUGIN_DIR.OS.'plugin.mpdf.php');
  * @endcode
  * 
- * ###GENERAZONE DEL PDF DI UNA PAGINA HTML
+ * ###GENERAZONE DEL PDF DI UNA PAGINA WEB
  * L'esempio ipotizza la generazione del pdf del post di un blog (file class_blog.php, metodo detail())
  * @code
  * $pdf = \Gino\cleanVar($request->GET, 'pdf', 'int', '');
@@ -204,6 +204,21 @@
  * 
  * La definizione dei contenuti di un pdf a partire da un array di singoli contenuti html avviene unendo questi singoli contenuti che saranno tra loro separati. 
  * In questo caso non posizionare i breakpage a fine html in quanto i singoli contenuti html vengono sempre mostrati a partire da una nuova pagina.
+ * 
+ * PERMESSI DEL FILE PDF
+ * ---------------
+ * L'opzione @a protection (array) permette di crittografare e impostare i permessi sul file pdf. Di default il documento non è crittografato e garantisce tutte le autorizzazioni all'utente (valore null di @a protection). Al contrario un array vuoto nega ogni autorizzazioni all'utente. \n
+ * L'array può includere alcuni, tutti o nessuno dei seguenti valori che indicano i permessi concessi (@see http://mpdf1.com/manual/index.php?tid=129&searchstring=setprotection):
+ *     - @a copy
+ *     - @a print
+ *     - @a modify
+ *     - @a annot-forms
+ *     - @a fill-forms
+ *     - @a extract
+ *     - @a assemble
+ *     - @a print-highres
+ * 
+ * Le password dell'utente e del proprietario vengono passate attraverso le opzioni @a user_password e @a owner_password.
  * 
  * GESTIONE FILE CSS
  * ---------------
@@ -1442,9 +1457,8 @@ mpdf-->";
 	 *   - @b format (string): formato della pagina (default A4)
 	 *   - @b landscape (boolean): orientamento orizzontale della pagina (default false)
 	 *   - @b mode (string): codifica del testo (default utf-8)
-	 *   - @b protection (array): crittografa e imposta i permessi per il file pdf insieme alle password utente e del proprietario (default array('print')); 
-	 *   l'array può includere alcuni, tutti o nessuno dei seguenti valori qualcuno. \n
-	 *   I valori inclusi indicano i permessi concessi (@see http://mpdf1.com/manual/index.php?tid=129&searchstring=setprotection):
+	 *   - @b protection (array): crittografa e imposta i permessi per il file pdf; il valore di default è null, ovvero il documento non è crittografato e garantisce tutte le autorizzazioni all'utente. \n
+	 *    L'array può includere alcuni, tutti o nessuno dei seguenti valori che indicano i permessi concessi:
 	 *     - @a copy
 	 *     - @a print
 	 *     - @a modify
@@ -1453,8 +1467,8 @@ mpdf-->";
 	 *     - @a extract
 	 *     - @a assemble
 	 *     - @a print-highres
-	 *   - @b user_password (string)
-	 *   - @b owner_password (string)
+	 *   - @b user_password (string): password utente del pdf
+	 *   - @b owner_password (string): password del proprietario del pdf
 	 *   - @b font_size (integer)
 	 *   - @b font (string)
 	 *   - @b top-margin (integer): distance in mm from top of page to start of text (ignoring any headers)
@@ -1509,7 +1523,7 @@ mpdf-->";
 		$landscape = \Gino\gOpt('landscape', $options, false);
 		$mode = array_key_exists('mode', $options) && $options['mode'] ? $options['mode'] : 'utf-8';
 		
-		$protection = \Gino\gOpt('protection', $options, array('print'));
+		$protection = \Gino\gOpt('protection', $options, null);
 		$user_password = \Gino\gOpt('user_password', $options, '');
 		$owner_password = \Gino\gOpt('owner_password', $options, '');
 		
@@ -1567,7 +1581,9 @@ mpdf-->";
 		$mpdf->simpleTables = $simple_tables;
 		$mpdf->showStats = $show_stats;
 		$mpdf->useOnlyCoreFonts = true;
-		$mpdf->SetProtection($protection, $user_password, $owner_password);
+		if(is_array($protection)) {
+			$mpdf->SetProtection($protection, $user_password, $owner_password);
+		}
 		$mpdf->SetTitle($title);
 		$mpdf->SetAuthor($author);
 		$mpdf->SetCreator($creator);
