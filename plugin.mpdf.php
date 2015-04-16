@@ -13,66 +13,66 @@
  * @code
  * # mv mpdf57 mpdf
  * @endcode
- * 3. Copiare il file mpdf.css nella directory css.
+ * 3. Copiare il file plugin.mpdf.php nella directory lib/plugin.
  * 4. Copiare il file func.mpdf.php nella directory lib.
+ * 5. Copiare il file mpdf.css nella directory css.
  * 
- * ###Operazioni aggiuntive
- * Se si attiva la visualizzazione della barra di progresso occorre assegnare i permessi read/write alla directory mpdf/tmp/
+ * ###In addition
+ * Oltre a queste operazioni si dovrebbe consentire la lettura/scrittura alle seguenti directory:
+ * - mpdf/tmp/
+ * - mpdf/ttfontdata/
+ * - mpdf/graph_cache/
+ * 
+ * I permessi read/write alla directory mpdf/tmp/ sono necessari quando si attiva la visualizzazione della barra di progresso. \n
+ * I permessi read/write alla directory mpdf/ttfontdata/ sono necessari per evitare gli errori di questo tipo:
  * @code
- * # chmod 777 tmp/
+ * file_put_contents(/.../lib/mpdf/ttfontdata/dejavusanscondensed.GSUBGPOStables.dat): failed to open stream: Permission denied ...
  * @endcode
  * 
- * Nel caso in cui si riscontra un errore di questo tipo:
- * @code
- * file_put_contents(/.../ttfontdata/dejavusanscondensed.GSUBGPOStables.dat): failed to open stream: Permission denied ...
- * @endcode
- * assegnare i permessi read/write alla directory mpdf/ttfontdata/
+ * ###Note
+ * Quando si aggiorna la versione della libreria mPDF occorre verificare se sono stati aggiornati nella classe mPDF i metodi che eventualmente la classe @a custom_mpdf sovrascrive. \n
+ * Nel caso di di modifiche sostanziali modificare i metodi della classe @a custom_mpdf.
  * 
- * Quando si aggiorna la versione della libreria mPDF occorre verificare se sono stati aggiornati nella classe mPDF i metodi che eventualmente la classe custom_mpdf sovrascrive. \n
- * Nel caso di di modifiche sostanziali modificare i metodi della classe custom_mpdf.
- * 
- * FUNZIONAMENTO
+ * STRUTTURA
  * ---------------
  * Il file plugin.mpdf.php comprende tre classi:
  *   - @a gino_mpdf
  *   - @a plugin_mpdf
  *   - @a custom_mpdf
  * 
- * La classe gino_mpdf raggruppa i metodi di definizione dei contenuti; questi metodi possono essere sovrascritti da una classe costruita appositamente per la generazione di uno specifico file pdf. \n
- * La classe plugin_mpdf contiene i metodi di impostazione del pdf. \n
+ * ###Classe gino_mpdf
+ * La classe gino_mpdf funge da interfaccia alla classe plugin_mpdf e definisce le impostazioni base del file pdf (gino_mpdf::defineBasicOptions()), l'header e il footer di default, il nome standard del file. \n
+ * In pratica questa classe raggruppa i metodi di definizione dei contenuti; metodi che possono essere sovrascritti da una classe costruita appositamente per la generazione di uno specifico file pdf.
+ * 
+ * ###Classe plugin_mpdf
+ * La classe plugin_mpdf costruisce il file pdf. Utilizzando il metodo plugin_mpdf::setPhpParams() è possibile impostare alcuni parametri php.
+ * 
+ * ###Classe custom_mpdf
  * La classe custom_mpdf estende mPDF per la personalizzazione degli output html.
  * 
+ * ###Interfacce per la generazione del pdf
  * I metodi che devono essere richiamati dalle applicazioni per generare i pdf sono:
  *   - gino_mpdf::pdfFromPage()
  *   - gino_mpdf::create()
+ * dove il metodo @a gino_mpdf::pdfFromPage() viene utilizzato per generare il pdf della visualizzazione di una pagina web, mentre @a gino_mpdf::create() per generare un file con un html personalizzato.
  * 
- * Il metodo @a gino_mpdf::pdfFromPage() viene utilizzato per generare il pdf della visualizzazione di una pagina web, mentre @a gino_mpdf::create() per generare un file con un html personalizzato.
+ * ###Processo
+ * gino_mpdf::create() istanzia plugin_mpdf e richiama plugin_mpdf::makeFile(); a sua volta plugin_mpdf::makeFile() istanzia custom_mpdf che estende mPDF.
  * 
- * 
- * gino_mpdf::create() istanzia plugin_mpdf e richiama plugin_mpdf::makeFile() \n
- * plugin_mpdf::makeFile() istanzia custom_mpdf che estende mPDF
- * 
- * La classe custom_mpdf contiene i metodi che sovrascrivono i metodi di mPDF. \n
- * La classe plugin_mpdf costruisce il file pdf; attraverso il metodo plugin_mpdf::setPhpParams() è possibile impostare alcuni parametri php. \n
- * La classe gino_mpdf funge da interfaccia alla classe plugin_mpdf e definisce le impostazioni base del file pdf (gino_mpdf::defineBasicOptions()), l'header e il footer di default, il nome standard del file.
- * 
- * MODO DI UTILIZZO
+ * MODI DI UTILIZZO
  * ---------------
- * Per attivare la classe occorre includere il file della libreria:
- * @code
- * require_once(PLUGIN_DIR.OS.'plugin.mpdf.php');
- * @endcode
+ * La libreria fornisce i metodi per generare il pdf di una pagina web oppure per generare un pdf costruito appositamente (ad esempio un report).
  * 
- * ###GENERAZONE DEL PDF DI UNA PAGINA WEB
- * L'esempio ipotizza la generazione del pdf del post di un blog (file class_blog.php, metodo detail())
+ * ###File pdf di una pagina web
+ * L'esempio ipotizza la generazione del pdf del post di un blog (file class_blog.php, metodo detail()). 
+ * Per stampare a video il pdf si aggiunge all'indirizzo il parametro pdf=1 (ad esempio http://localhost/gino/blog/detail/prova/?pdf=1)
  * @code
  * $pdf = \Gino\cleanVar($request->GET, 'pdf', 'int', '');
  * if($pdf)
  * {
  *   require_once(PLUGIN_DIR.OS.'plugin.mpdf.php');
- *   require_once(LIB_DIR.OS.'func.mpdf.php');
  *   
- *   \Gino\Plugin\plugin_mpdf::setPhpParams(array('disable_error'=>false));
+ *   \Gino\Plugin\plugin_mpdf::setPhpParams();
  *   
  *   $obj_pdf = new \Gino\Plugin\gino_mpdf();
  *   return $obj_pdf->pdfFromPage($view->render($dict), array(
@@ -82,22 +82,91 @@
  * }
  * @endcode
  * 
- * ###GENERAZONE DI UN FILE PDF COSTRUITO AD HOC
- * La procedura da seguire è indicativamente la seguente:
- * 1. creare una classe per la definizione dei contenuti che estenda la classe gino_mpdf (es child_1)
- * 2. in questa classe (child_1) o in una sua ulteriore classe figlia (child_2) definire header, footer e contenuti sovrascrivendo i metodi gino_mpdf::header(), gino_mpdf::footer() e gino_mpdf::content()
- * 3. istanziare child_1/child_2 passandogli l'opzione @a html ed eventuali altre opzioni specifiche
- * 
+ * oppure, utilizzando la risposta Gino.Http.ResponsePdf
  * @code
- * $child_1 = new child_1(array(['opt1'=>val1, ...] 'html'=>[true|false]));
- * return $child_1->generate($options);
+ * $pdf = \Gino\cleanVar($request->GET, 'pdf', 'int', '');
+ * if($pdf)
+ * {
+ *   \Gino\Loader::import('class/http', '\Gino\Http\ResponsePdf');
+ *   return new \Gino\Http\ResponsePdf($content, array(
+ *     'css_file'=>array('css/mpdf.css'),
+ *     'filename'=>'blog.pdf'
+ *   ));
+ * }
  * @endcode
  * 
+ * ###File pdf personalizzato
+ * Creare nella classe controller il metodo pubblico che gestisce la generazione del file pdf (ricordandosi di inserirlo nel file ini). 
+ * Segue un metodo di esempio:
+ * @code
+ * public function pdf() {
+ *   require_once(PLUGIN_DIR.OS.'plugin.mpdf.php');
+ *   \Gino\Plugin\plugin_mpdf::setPhpParams();
+ *   
+ *   $options = array(
+ *     'progressBar'=>false, 
+ *     'output'=>'inline', 
+ *     'img_dir'=>'app/catalog/img', 
+ *     'save_dir'=>null, 
+ *     'css_file'=>array(), 
+ *     'css_html'=>null
+ *   );
+ *   
+ *   $html = false;
+ *   
+ *   $obj_pdf = new \Gino\Plugin\gino_mpdf(array('html'=>$html));
+ *   
+ *   $options['content'] = \Gino\htmlToPdf("<p>html contents</p>");
+ *   
+ *   $pdf = $obj_pdf->create($options);
+ *   if($html)
+ *   {
+ *     $document = new \Gino\Document($pdf);
+ *     return $document();
+ *   }
+ *   else return $pdf;
+ * }
+ * @endcode
+ * 
+ * Nel caso si abbia bisogno di creare più file pdf oppure anche soltanto di strutturarli in un modo più complesso può essere più efficiente creare nella classe controller 
+ * un wrapper per i pdf (ad esempio createGinoPdf) che richiami una classe apposita (ad esempio GinoPdf) che estende la classe gino_mpdf. \n
+ * La costruzione del singolo file sarà delegata a una apposita classe che estende, come da esempio, la classe GinoPdf. 
+ * In questa classe (myGinoPdf) sarà così possibile personalizzare i metodi content, footer, header, sovrascrivendoli.
+ * 
+ * @code
+ * ClassController::createGinoPdf() {
+ *   ...
+ *   plugin_mpdf::setPhpParams([...]);
+ *   $obj = new myGinoPdf([...]);
+ *   return $obj->generate([...]);
+ * }
+ * 
+ * class myGinoPdf extends GinoPdf {
+ *   content(), header(), footer()
+ * }
+ * 
+ * class GinoPdf extends gino_mpdf {
+ *   setFileName()
+ *   generate() {
+ *     $pdf = $this->create([...]);
+ *     if($html)
+ *       return $pdf;
+ *     
+ *     if($link_return)
+ *       $this->redirect($link_return);
+ *     return null;
+ *   }
+ * }
+ * @endcode
+ * 
+ * HEADER/FOOTER
+ * ---------------
  * L'header e il footer del pdf devono essere passati come opzioni al metodo plugin_mpdf::htmlStart(); 
  * per non stampare il footer occorre impostare il parametro @a footer a @a false. \n
  * Per visualizzare un esempio di header e footer vedere i metodi gino_mpdf::defaultHeader() e gino_mpdf::defaultFooter().
  * 
- * ###OUTPUT
+ * OUTPUT
+ * ---------------
  * La libreria gestisce i seguenti output:
  *   - stampare a video l'html (string)
  *   - inviare il file inline al browser (inline)
@@ -109,7 +178,7 @@
  * gino_mpdf::create(array('output'=>[value]))
  * @endcode
  * 
- * ###DEBUG
+ * ###Debug
  * Per attivare la modalità debug occorre passare l'opzione @a debug a gino_mpdf::create() o a gino_mpdf::pdfFromPage() che lo richiama.
  * @code
  * gino_mpdf::create(array('debug'=>true))
@@ -160,12 +229,15 @@
  * 
  * oppure
  * @code
- * plugin_mpdf::setPhpParams(array('disable_error'=>false));
+ * \Gino\Plugin\plugin_mpdf::setPhpParams(array('disable_error'=>true));
  * @endcode
  * 
- * ###PROGRESS BAR
+ * ###Progress bar
  * La progress bar non è raccomandata per un utilizzo generale ma può essere di aiuto in fase di sviluppo o nella generazione di documenti lenti. \n
  * Per impostare il valore a livello globale occorre editare il valore per @a progressBar nel file di configurazione config.php.
+ * 
+ * Per attivare la barra di progresso nella generazione inline di un PDF occorre assegnare i permessi 777 alla directory mpdf/tmp/, 
+ * in quanto la libreria salva un file temporaneo in questa directory e poi lo mostra a video attraverso il file mpdf/includes/out.php.
  * 
  * ####Personalizzazione
  * La pagina della progress bar può essere personalizzata attraverso la definizione dell'opzione @a progbar_altHTML nel metodo plugin_mpdf::makeFile(). 
@@ -176,12 +248,8 @@
  * <img style="vertical-align: middle" src="img/loading.gif" /> Creating PDF file. Please wait...</div>'
  * @endcode
  * 
- * Inoltre è possibile sovrascrivere direttamente il metodo che genera la pagina della progress bar, ad esempio per personalizzarne la lingua o le diciture. \n
+ * Inoltre è possibile sovrascrivere direttamente il metodo che genera la pagina della progress bar, ad esempio per personalizzarne la lingua o le stringhe. \n
  * In questo caso occorre modificare il metodo custom_mpdf::StartProgressBarOutput().
- * 
- * ####Attivazione
- * Per attivare la barra di progresso nella generazione inline di un PDF occorre assegnare i permessi 777 alla directory MPDF/tmp/, 
- * in quanto la libreria salva un file temporaneo in questa directory e poi lo mostra a video attraverso il file MPDF/includes/out.php.
  * 
  * GESTIONE DEI CONTENUTI
  * ---------------
@@ -359,8 +427,13 @@
  */
 namespace Gino\Plugin;
 
-// Percorso relativo alla directory principale della libreria mPDF
-define('_MPDF_URI', 'lib/mpdf/');
+/**
+ * @brief Percorso relativo alla directory principale della libreria mPDF
+ * @description Definire la costante se si utilizza la barra di progresso
+ * 
+ * @var string
+ */
+define('_MPDF_URI', SITE_WWW.'/lib/mpdf/');
 
 require_once(LIB_DIR.OS."mpdf".OS."mpdf.php");
 require_once(LIB_DIR.OS."func.mpdf.php");
@@ -398,13 +471,12 @@ class gino_mpdf {
 	/**
 	 * Costruttore
 	 * 
-	 * @param integer $ute
 	 * @param array $options
 	 *   array associativo di opzioni
 	 *   - @b html (boolean): indica se mostrare l'html o creare il file pdf
 	 * @return void
 	 * 
-	 * Se si mostra l'html (html true) la pagina carica lo stesso il file di stile specificato nell'opzione @a css_file del metodo create().
+	 * Se si mostra l'html (html=true) la pagina carica lo stesso il file di stile specificato nell'opzione @a css_file del metodo create().
 	 */
 	function __construct($options=array()) {
 		
@@ -445,7 +517,7 @@ class gino_mpdf {
 	 *   - img_dir (string): percorso alle immagini
 	 * @return string
 	 */
-	protected function header($options=array()) {
+	public function header($options=array()) {
 		
 		return null;
 	}
@@ -458,7 +530,7 @@ class gino_mpdf {
 	 *   - img_dir (string): percorso alle immagini
 	 * @return string
 	 */
-	protected function footer($options=array()) {
+	public function footer($options=array()) {
 		
 		return null;
 	}
@@ -469,7 +541,7 @@ class gino_mpdf {
 	 * @param array $options array associativo di opzioni per la generazione del pdf (@see create())
 	 * @return string or array
 	 */
-	protected function content($options=array()) {
+	public function content($options=array()) {
 		
 		return null;
 	}
@@ -614,10 +686,9 @@ class gino_mpdf {
 	 *   - @b img_dir (string): percorso della directory delle immagini per header e footer (es. app/blog/img)
 	 *   - @b save_dir (string): percorso della directory di salvataggio dei file (es. $this->getBaseAbsPath().'/pdf')
 	 *   - @b css_html (string): file css per l'html (es. app/blog/blog_blog.css)
-	 *   - @b content (string): contenuto del file
 	 *   opzione del costruttore della classe plugin_mpdf
 	 *   - @b output (string): tipo di output (default inline)
-	 *   - @b debug (boolean)
+	 *   - @b debug (boolean): abilita la modalità debug
 	 *   opzioni di plugin_mpdf::makeFile()
 	 *   opzioni di plugin_mpdf::definePage()
 	 *   - @b css_file (mixed): file css per per il pdf (es. array('app/blog/pdf.css', 'css/mpdf.css'))
@@ -630,15 +701,20 @@ class gino_mpdf {
 		
 		$link_return = \Gino\gOpt('link_return', $opts, null);
 		$output = \Gino\gOpt('output', $opts, 'inline');
+		$debug = \Gino\gOpt('debug', $opts, null);
+		
 		$css_file = \Gino\gOpt('css_file', $opts, null);
 		$css_html = \Gino\gOpt('css_html', $opts, null);
 		$img_dir = \Gino\gOpt('img_dir', $opts, null);
 		$save_dir = \Gino\gOpt('save_dir', $opts, null);
 		$filename = \Gino\gOpt('filename', $opts, null);
 		
+		// Def options
 		$options = gino_mpdf::defineBasicOptions();
         
         $options['output'] = $output;
+        if(is_bool($debug)) $options['debug'] = $debug;
+        
         if($css_file) $options['css_file'] = $css_file;
         if($css_html) $options['css_html'] = $css_html;
         if($img_dir) $options['img_dir'] = $img_dir;
@@ -646,11 +722,14 @@ class gino_mpdf {
         if($filename) $options['filename'] = $filename;
         
 		$options['content'] = \Gino\htmlToPdf($content);
+		// /Def
 		
 		$pdf = $this->create($options);
 		
 		if($this->_html)
+		{
 			return $pdf;
+		}
 		
 		if($link_return)
 		{
@@ -675,12 +754,12 @@ class gino_mpdf {
 	 *     - @a download
 	 *     - @a string
 	 *   - @b debug (boolean): attiva il debug (default false)
+	 *   - @b content (string): contenuto del file; se nullo va a leggere il metodo self::content()
 	 *   - @b filename (string): nome del file (default doc.pdf)
 	 *   - @b img_dir (string): percorso alle immagini nel pdf
 	 *   - @b save_dir (string): percorso alla directory di salvataggio del file
 	 *   - @b css_file (mixed): percorso ai file css inclusi nel pdf (caricati in @see plugin_mpdf::definePage())
 	 *   - @b css_html (string): percorso al file css incluso nel formato html (ad esempio 'app/news/css/web.css')
-	 *   - @b content (string): contenuto del file
 	 *   opzioni specifiche del metodo plugin_mpdf::makeFile():
 	 *   - @b title (string)
 	 *   - @b author (string)
@@ -706,7 +785,7 @@ class gino_mpdf {
 	 *   - @b header (string)
 	 *   - @b footer (string)
 	 *   - @b debug_exit (boolean)
-	 * @return mixed
+	 * @return mixed (@see plugin_mpdf::makeFile())
 	 *   - string, html and output string
 	 *   - boolean true, output File
 	 *   - exit, output inline and download
@@ -731,13 +810,14 @@ class gino_mpdf {
 		);
 		
 		$this->_pdf = $pdf;
+		$options['object'] = $this;
 		
-		$content = \Gino\gOpt('content', $options, null);
-		if(!$content) $content = $this->content($options);
-		
-		// HTML
+		// Html
 		if($this->_html)
 		{
+			$content = \Gino\gOpt('content', $options, null);
+			if(!$content) $content = $this->content($options);
+			
 			if(is_array($content))
 				$content = implode("<br />", $content);
 			
@@ -746,19 +826,7 @@ class gino_mpdf {
 			
 			return $content;
 		}
-		// End
-		
-		if(is_array($content))
-		{
-			$html = $content;
-		}
-		else
-		{
-			$options['header'] = $this->header(array('img_dir'=>$img_dir));
-			$options['footer'] = $this->footer(array('img_dir'=>$img_dir));
-			
-			$html = $pdf->definePage($content, $options);
-		}
+		// /Html
 		
 		if($output == 'file')
 		{
@@ -767,8 +835,7 @@ class gino_mpdf {
 		}
 		else $file = $filename;
 		
-		$res = $pdf->makeFile($html, $file, $options);
-		
+		$res = $pdf->makeFile($file, $options);
 		return $res;
 	}
 	
@@ -1078,6 +1145,9 @@ class custom_mpdf extends \mPDF {
 	 * @see mPDF::StartProgressBarOutput()
 	 */
 	function StartProgressBarOutput($mode=1) {
+		
+		ob_end_flush();
+		
 		// must be relative path, or URI (not a file system path)
 		if (!defined('_MPDF_URI')) { 
 			$this->progressBar = false;
@@ -1094,59 +1164,67 @@ class custom_mpdf extends \mPDF {
 				<title>mPDF File Progress</title>
 				<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 				<link rel="stylesheet" type="text/css" href="'._MPDF_URI.'progbar.css" />
-			</head>
-			<body>
+			</head>';
+			
+			echo '<body>
 				<div class="main">
 				<div class="heading">'.$this->progbar_heading.'</div>
 				<div class="demo">';
-			if ($this->progressBar==2) {
-				echo '<table width="100%"><tr><td style="width: 50%;"> 
-				<span class="barheading">Writing HTML code</span> <br/>
-
-			<div class="progressBar">
-			<div id="element1"  class="innerBar">&nbsp;</div>
-			</div>
-			<span class="code" id="box1"></span>
-			</td><td style="width: 50%;">
-			<span class="barheading">Autosizing elements</span> <br/>
-			<div class="progressBar">
-			<div id="element4"  class="innerBar">&nbsp;</div>
-			</div>
-			<span class="code" id="box4"></span>
-			<br/><br/>
-			<span class="barheading">Writing Tables</span> <br/>
-			<div class="progressBar">
-			<div id="element7"  class="innerBar">&nbsp;</div>
-			</div>
-			<span class="code" id="box7"></span>
-			</td></tr>
-			<tr><td><br /><br /></td><td></td></tr>
-			<tr><td style="width: 50%;"> 
-			';
-			}
-			echo '<span class="barheading">Writing PDF file</span> <br/>
-			<div class="progressBar">
-			<div id="element2"  class="innerBar">&nbsp;</div>
-			</div>
-			<span class="code" id="box2"></span>';
 			
-			if ($this->progressBar==2) {
-				echo '
-			</td><td style="width: 50%;">
-			<span class="barheading">Memory usage</span> <br/>
-			<div class="progressBar">
-			<div id="element5"  class="innerBar">&nbsp;</div>
-			</div>
-			<span id="box5">0</span> '.ini_get("memory_limit").'<br />
-			<br/><br/>
-			<span class="barheading">Memory usage (peak)</span> <br/>
-			<div class="progressBar">
-			<div id="element6"  class="innerBar">&nbsp;</div>
-			</div>
-			<span id="box6">0</span> '.ini_get("memory_limit").'<br />
-			</td></tr>
-			</table>
-			'; }
+			if($this->progressBar==2)
+			{
+				echo '<table width="100%">';
+				
+				echo '<tr><td style="width: 50%;">
+				<span class="barheading">Writing HTML code</span> <br/>
+				<div class="progressBar">
+					<div id="element1"  class="innerBar">&nbsp;</div>
+				</div>
+				<span class="code" id="box1"></span>
+				</td>';
+				echo '<td style="width: 50%;">
+				<span class="barheading">Autosizing elements</span> <br/>
+				<div class="progressBar">
+					<div id="element4"  class="innerBar">&nbsp;</div>
+				</div>
+				<span class="code" id="box4"></span>
+				<br/><br/>
+				<span class="barheading">Writing Tables</span> <br/>
+				<div class="progressBar">
+					<div id="element7"  class="innerBar">&nbsp;</div>
+				</div>
+				<span class="code" id="box7"></span>
+				</td></tr>';
+				
+				echo '<tr><td><br /><br /></td><td></td></tr>';
+				echo '<tr><td style="width: 50%;">';
+			}
+			
+			echo '<span class="barheading">Writing PDF file</span> <br/>
+				<div class="progressBar">
+					<div id="element2" class="innerBar">&nbsp;</div>
+				</div>
+				<span class="code" id="box2"></span>';
+			
+			if($this->progressBar==2)
+			{	
+				echo '</td>';
+				echo '<td style="width: 50%;">
+				<span class="barheading">Memory usage</span> <br/>
+				<div class="progressBar">
+					<div id="element5" class="innerBar">&nbsp;</div>
+				</div>
+				<span id="box5">0</span> '.ini_get("memory_limit").'<br />
+				<br/><br/>
+				<span class="barheading">Memory usage (peak)</span> <br/>
+				<div class="progressBar">
+					<div id="element6" class="innerBar">&nbsp;</div>
+				</div>
+				<span id="box6">0</span> '.ini_get("memory_limit").'<br />
+				</td></tr>';
+				
+				echo '</table>';
+			}
 			echo '<br/><br/>
 			<span id="box3"></span>
 			</div>';
@@ -1219,43 +1297,70 @@ class plugin_mpdf {
 	}
 	
 	/**
-	 * Imposta dei parametri di configurazione in uno script php
+	 * Imposta alcuni parametri di configurazione in uno script php
 	 * 
 	 * @param array $options
 	 *   array associativo di opzioni
-	 *   - @b disable_error (boolean): spegne tutte le segnalazioni d'errore
-	 *   - @b memory_usage (boolean): ritorna l'ammontare di memoria allocata da php (in byte); 
-	 *   si tratta della quantità di memoria utilizzata non appena viene eseguito lo script o delle singole istruzioni
-	 *   - @b memory_peak_usage (boolean): ritorna il picco di memoria allocata da php (in byte)
+	 *   - @b disable_error (boolean): blocca tutte le segnalazioni d'errore (default false)
+	 *   - @b memory_limit (string): quantità di memoria permessa a PHP nello script (es. 16M); -1 => memoria infinita (pericoloso in produzione!)
+	 *   - @b max_execution_time (integer): tempo massimo di esecuzione dello script in secondi (300 seconds = 5 minutes)
 	 * @return null
-	 * 
-	 * @a memory_get_usage e @a memory_get_peak_usage prevedono l'opzione @a real_usage: \n
-	 *   - true, ritorna la reale dimensione della memorai allocata dal sistema
-	 *   - false (o non impostata), soltanto la memoria usata da emalloc()
-	 * 
-	 * Richiamando memory_get_peak_usage alla fine dello script si riuscirà a ricavare la più alta allocazione registrata durante l'esecuzione. \n
-	 * Probabilmente è molto più utile questo valore che ottenere i valori di inizio e fine dello script 
-	 * in quanto in questo modo non si tiene conto della memoria allocata e poi deallocata durante il runtime.
 	 */
 	public static function setPhpParams($options=array()) {
 		
 		$disable_error = \Gino\gOpt('disable_error', $options, false);
-		$memory_usage = \Gino\gOpt('memory_usage', $options, false);
-		$memory_peak_usage = \Gino\gOpt('memory_peak_usage', $options, false);
+		$memory_limit = \Gino\gOpt('memory_limit', $options, null);
+		$max_execution_time = \Gino\gOpt('max_execution_time', $options, null);
+		
+		if(!is_null($memory_limit))
+		{
+			ini_set('memory_limit', $max_execution_time);
+		}
+		
+		if(!is_null($max_execution_time))
+		{
+			ini_set('max_execution_time', $max_execution_time);
+		}
 		
 		if($disable_error)
 		{
 			error_reporting(0);
 		}
 		
+		return null;
+	}
+	
+	/**
+	 * Memoria allocata dallo script php
+	 * 
+	 * @param array $options
+	 *   array associativo di opzioni
+	 *   - @b memory_usage (boolean): ritorna l'ammontare di memoria allocata da php (in byte);
+	 *   si tratta della quantità di memoria utilizzata non appena viene eseguito lo script o delle singole istruzioni
+	 *   - @b memory_peak_usage (boolean): ritorna il picco di memoria allocata da php (in byte)
+	 * @return null
+	 *
+	 * @a memory_get_usage e @a memory_get_peak_usage prevedono l'opzione @a real_usage: \n
+	 *   - true, ritorna la reale dimensione della memoria allocata dal sistema
+	 *   - false (o non impostata), soltanto la memoria usata da emalloc()
+	 * 
+	 * Richiamando memory_get_peak_usage alla fine dello script si riuscirà a ricavare la più alta allocazione registrata durante l'esecuzione. \n
+	 * Probabilmente è molto più utile questo valore che ottenere i valori di inizio e fine dello script
+	 * in quanto in questo modo non si tiene conto della memoria allocata e poi deallocata durante il runtime.
+	 */
+	public static function getMemoryUsage($options=array()) {
+		
+		$memory_usage = \Gino\gOpt('memory_usage', $options, false);
+		$memory_peak_usage = \Gino\gOpt('memory_peak_usage', $options, false);
+		
 		if($memory_usage)
 		{
-			echo convertSize(memory_get_usage(true))."<br />";
+			echo \Gino\convertSize(memory_get_usage(true))."<br />";
 		}
 		
 		if($memory_peak_usage)
 		{
-			echo convertSize(memory_get_peak_usage(true))."<br />";
+			echo \Gino\convertSize(memory_get_peak_usage(true))."<br />";
 		}
 		
 		return null;
@@ -1442,10 +1547,6 @@ mpdf-->";
 	 * 
 	 * @see mPDF::WriteHTML()
 	 * @see mPDF::Output()
-	 * @param mixed $html
-	 *   - @a string, documento con pagine aventi la stessa struttura
-	 *   - @a array, documento con pagine che possono cambiare struttura, come l'orientamento; struttura dell'array:
-	 *     array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
 	 * @param string $filename nome del file pdf
 	 * @param array $options
 	 *   array associativo di opzioni
@@ -1458,7 +1559,7 @@ mpdf-->";
 	 *   - @b landscape (boolean): orientamento orizzontale della pagina (default false)
 	 *   - @b mode (string): codifica del testo (default utf-8)
 	 *   - @b protection (array): crittografa e imposta i permessi per il file pdf; il valore di default è null, ovvero il documento non è crittografato e garantisce tutte le autorizzazioni all'utente. \n
-	 *    L'array può includere alcuni, tutti o nessuno dei seguenti valori che indicano i permessi concessi:
+	 *     L'array può includere alcuni, tutti o nessuno dei seguenti valori che indicano i permessi concessi:
 	 *     - @a copy
 	 *     - @a print
 	 *     - @a modify
@@ -1480,21 +1581,28 @@ mpdf-->";
 	 *     - P, portrait (default)
 	 *   - @b simpleTables (boolean): disabilita gli stili css complessi delle tabelle (bordi, padding, ecc.) per incrementare le performance (default false)
 	 *   - @b showStats (boolean): visualizza i valori di performance relativi al file pdf (default false); 
-	 *   l'opzione sopprime l'output del file pdf e visualizza i dati sul browser, tipo:
-	 *   @code
-	 *   Generated in 0.45 seconds
-	 *   Compiled in 0.46 seconds (total)
-	 *   Peak Memory usage 10.25MB
-	 *   PDF file size 37kB
-	 *   Number of fonts 6
-	 *   @endcode
+	 *     l'opzione sopprime l'output del file pdf e visualizza i dati sul browser, tipo:
+	 *     @code
+	 *     Generated in 0.45 seconds
+	 *     Compiled in 0.46 seconds (total)
+	 *     Peak Memory usage 10.25MB
+	 *     PDF file size 37kB
+	 *     Number of fonts 6
+	 *     @endcode
 	 *   - @b progressBar (mixed): abilita la visualizzazione di una barra di progresso durante la generazione del file; 
-	 *   non è raccomandata come utilizzo generale ma può essere utile in ambiente di sviluppo e nella generazione lenta di documenti
+	 *     non è raccomandata come utilizzo generale ma può essere utile in ambiente di sviluppo e nella generazione lenta di documenti
 	 *     - 1, visualizza la progress bar
 	 *     - 2, visualizza più di una progress bar per un esame dettagliato del progresso
 	 *     - false, disabilita la progress bar (default)
 	 *   - @b progbar_heading (string): heading personalizzato della progressBar
 	 *   - @b progbar_altHTML (string): progressBar personalizzata (html)
+	 *   opzioni sui contenuti
+	 *   - @b content (mixed): contenuto del file; se nullo legge il metodo self::content()
+	 *     - @a string, contenuti con pagine aventi la stessa formattazione
+	 *     - @a array, contenuti con pagine che possono cambiare formattazione, come ad esempio l'orientamento; struttura dell'array:
+	 *     array([, string html], array(orientation=>[, string [L|P]], html=>[, string]), ...)
+	 *   - @b object (object): oggetto @a gino_mpdf
+	 *   - @b img_dir (string): percorso ai file immagine di header/footer
 	 * @return mixed
 	 *   - string (output string)
 	 *   - exit (output inline e download)
@@ -1502,8 +1610,15 @@ mpdf-->";
 	 * 
 	 * Esempio:
 	 * @code
-	 * $sequence = array($html1, array('orientation'=>'L', 'html'=>$html2));
-	 * $pdf->makeFile($sequence, $filename, array('title'=>_("Progetto"), 'author'=>_("Otto Srl"), 'creator'=>_("Marco Guidotti")));
+	 * $pdf->makeFile(
+	 *   $filename, 
+	 *   array(
+	 *     'title'=>_("Progetto"), 
+	 *     'author'=>_("Otto Srl"), 
+	 *     'creator'=>_("Marco Guidotti"), 
+	 *     'content'=>array($html1, array('orientation'=>'L', 'html'=>$html2)), 
+	 *     'object'=>$this
+	 * ));
 	 * @endcode
 	 * 
 	 * Il costruttore della classe mPDF viene costruito con i seguenti valori di default
@@ -1511,7 +1626,7 @@ mpdf-->";
 	 * function mPDF($mode='',$format='A4',$default_font_size=0,$default_font='',$mgl=15,$mgr=15,$mgt=16,$mgb=16,$mgh=9,$mgf=9, $orientation='P') { ... }
 	 * @endcode
 	 */
-	public function makeFile($html, $filename, $options=array()){
+	public function makeFile($filename, $options=array()){
 		
 		$title = \Gino\gOpt('title', $options, '');
 		$author = \Gino\gOpt('author', $options, '');
@@ -1593,17 +1708,43 @@ mpdf-->";
 		$mpdf->watermarkTextAlpha = 0.1;
 		$mpdf->SetDisplayMode('fullpage');
 		
+		//$mpdf->allow_charset_conversion = true;
+		//$mpdf->charset_in = 'iso-8859-1';	// default 'utf-8'
+		//$mpdf->shrink_tables_to_fit = 0;	// prevent all tables from resizing
+		
+		// Progress bar
 		if($progress_bar)
 		{
 			if($progress_bar_heading) $mpdf->progbar_heading = $progress_bar_heading;
 			if($progress_bar_alt) $mpdf->progbar_altHTML = $progress_bar_alt;
+			if($progress_bar === true)
+				$progress_bar = 1;
 			
 			$mpdf->StartProgressBarOutput($progress_bar);
 		}
 		
-		//$mpdf->allow_charset_conversion = true;
-		//$mpdf->charset_in = 'iso-8859-1';	// default 'utf-8'
-		//$mpdf->shrink_tables_to_fit = 0;	// prevent all tables from resizing
+		// Def contents
+		$content = \Gino\gOpt('content', $options, null);
+		$object = \Gino\gOpt('object', $options, null);
+		$img_dir = \Gino\gOpt('img_dir', $options, null);
+		
+		if(!$content && is_object($object)) $content = $object->content($options);
+		
+		if(is_array($content))
+		{
+			$html = $content;
+		}
+		else
+		{
+			if(is_object($object))
+			{
+				$options['header'] = $object->header(array('img_dir'=>$img_dir));
+				$options['footer'] = $object->footer(array('img_dir'=>$img_dir));
+			}
+			
+			$html = $this->definePage($content, $options);
+		}
+		// /Def
 		
 		if(is_string($html))
 		{

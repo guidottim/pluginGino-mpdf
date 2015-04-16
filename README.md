@@ -10,10 +10,11 @@ mPDF è una classe PHP che genera file PDF da codice HTML con Unicode/UTF-8 e su
 * scaricare la libreria
 * scompattare il file nella directory lib e rinominare la directory senza il numero di versione, ad esempio:
 
-	mv MPDF56 MPDF
+	mv mpdf60 mpdf
 
-* copiare il file mpdf.css nella directory css.
+* copiare il file plugin.mpdf.php nella directory lib/plugin.
 * copiare il file func.mpdf.php nella directory lib.
+* copiare il file mpdf.css nella directory css.
 
 # Utilizzo
 
