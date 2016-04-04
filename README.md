@@ -41,4 +41,4 @@ Si prega di segnalare bug, errori e consigli alla pagina del progetto su github:
 La documentazione relativa alla libreria si può trovare all'indirizzo <a href="http://gino.otto.to.it/page/view/plugin" target="_blank">http://gino.otto.to.it/page/view/plugin</a>.
 
 # Copyright
-Copyright © 2005-2015 [Otto srl](http://www.otto.to.it), [MIT License](http://opensource.org/licenses/MIT)
+Copyright © 2005-2016 [Otto srl](http://www.otto.to.it), [MIT License](http://opensource.org/licenses/MIT)

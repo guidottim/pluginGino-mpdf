@@ -36,7 +36,7 @@
  * @file func.mpdf.php
  * @brief Racchiude le librerie per il trattamento di stringhe e dei valori da database in pdf
  *
- * @copyright 2005-2015 Otto srl (http://www.opensource.org/licenses/mit-license.php) The MIT License
+ * @copyright 2005-2016 Otto srl (http://www.opensource.org/licenses/mit-license.php) The MIT License
  * @author marco guidotti guidottim@gmail.com
  * @author abidibo abidibo@gmail.com
  */
@@ -53,6 +53,24 @@ function htmlToPdf($string) {
 	$string = htmlentities($string, ENT_QUOTES, 'UTF-8');
 	
 	return htmlspecialchars_decode($string);
+}
+
+/**
+ * @brief Sostituzione caratteri di word
+ *
+ * @param string $text
+ * @return stringa ripulita
+ */
+function replaceChar($text)
+{
+	$find = array("’", "‘", "`");
+	$text = str_replace($find, "'", $text);
+	$find = array("“", "”");
+	$text = str_replace($find, "\"", $text);
+	$text = str_replace("…", "...", $text);
+	$text = str_replace("–", "-", $text);
+
+	return $text;
 }
 
 /**
